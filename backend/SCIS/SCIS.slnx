@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="SCIS.API/SCIS.API.csproj" Id="94c89c27-faa5-4897-b098-9ae3dd44cab9" />
+  <Project Path="SCIS.Core/SCIS.Core.csproj" Id="63a2201f-424d-438a-b6e4-b884dfe1ec3c" />
+  <Project Path="SCIS.Infrastructure/SCIS.Infrastructure.csproj" Id="67333ca3-bdf2-4d1a-bfc3-35dafb261991" />
+  <Project Path="SCIS.ML/SCIS.ML.csproj" Id="8647590e-f0f0-4f78-9b36-a4033c586f24" />
+</Solution>
