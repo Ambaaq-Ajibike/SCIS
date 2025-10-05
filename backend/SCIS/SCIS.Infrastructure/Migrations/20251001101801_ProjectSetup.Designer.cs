@@ -12,8 +12,8 @@ using SCIS.Infrastructure.Data;
 namespace SCIS.Infrastructure.Migrations
 {
     [DbContext(typeof(SCISDbContext))]
-    [Migration("20250930204832_Init")]
-    partial class Init
+    [Migration("20251001101801_ProjectSetup")]
+    partial class ProjectSetup
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -27,11 +27,10 @@ namespace SCIS.Infrastructure.Migrations
 
             modelBuilder.Entity("SCIS.Core.Entities.AuditLog", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("uuid")
+                        .HasDefaultValueSql("gen_random_uuid()");
 
                     b.Property<string>("Action")
                         .IsRequired()
@@ -42,8 +41,8 @@ namespace SCIS.Infrastructure.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
 
-                    b.Property<int?>("EntityId")
-                        .HasColumnType("integer");
+                    b.Property<Guid?>("EntityId")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("EntityType")
                         .HasMaxLength(100)
@@ -53,8 +52,8 @@ namespace SCIS.Infrastructure.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
 
-                    b.Property<int?>("HospitalId")
-                        .HasColumnType("integer");
+                    b.Property<Guid?>("HospitalId")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("IpAddress")
                         .HasMaxLength(50)
@@ -75,8 +74,8 @@ namespace SCIS.Infrastructure.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
-                    b.Property<int?>("UserId")
-                        .HasColumnType("integer");
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
@@ -91,11 +90,10 @@ namespace SCIS.Infrastructure.Migrations
 
             modelBuilder.Entity("SCIS.Core.Entities.DataRequest", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("uuid")
+                        .HasDefaultValueSql("gen_random_uuid()");
 
                     b.Property<string>("DataType")
                         .IsRequired()
@@ -112,11 +110,11 @@ namespace SCIS.Infrastructure.Migrations
                     b.Property<bool>("IsRoleAuthorized")
                         .HasColumnType("boolean");
 
-                    b.Property<int?>("PatientConsentId")
-                        .HasColumnType("integer");
+                    b.Property<Guid?>("PatientConsentId")
+                        .HasColumnType("uuid");
 
-                    b.Property<int>("PatientId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("PatientId")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Purpose")
                         .HasMaxLength(1000)
@@ -125,11 +123,11 @@ namespace SCIS.Infrastructure.Migrations
                     b.Property<DateTime>("RequestDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("RequestingHospitalId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("RequestingHospitalId")
+                        .HasColumnType("uuid");
 
-                    b.Property<int>("RequestingUserId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("RequestingUserId")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("ResponseData")
                         .HasMaxLength(1000)
@@ -163,11 +161,10 @@ namespace SCIS.Infrastructure.Migrations
 
             modelBuilder.Entity("SCIS.Core.Entities.Hospital", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("uuid")
+                        .HasDefaultValueSql("gen_random_uuid()");
 
                     b.Property<string>("Address")
                         .IsRequired()
@@ -216,11 +213,10 @@ namespace SCIS.Infrastructure.Migrations
 
             modelBuilder.Entity("SCIS.Core.Entities.Patient", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("uuid")
+                        .HasDefaultValueSql("gen_random_uuid()");
 
                     b.Property<bool>("BiometricConsent")
                         .HasColumnType("boolean");
@@ -248,8 +244,8 @@ namespace SCIS.Infrastructure.Migrations
                         .HasMaxLength(10)
                         .HasColumnType("character varying(10)");
 
-                    b.Property<int>("HospitalId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("HospitalId")
+                        .HasColumnType("uuid");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
@@ -280,11 +276,10 @@ namespace SCIS.Infrastructure.Migrations
 
             modelBuilder.Entity("SCIS.Core.Entities.PatientConsent", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("uuid")
+                        .HasDefaultValueSql("gen_random_uuid()");
 
                     b.Property<DateTime>("ConsentDate")
                         .HasColumnType("timestamp with time zone");
@@ -307,18 +302,18 @@ namespace SCIS.Infrastructure.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
 
-                    b.Property<int>("PatientId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("PatientId")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Purpose")
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
 
-                    b.Property<int>("RequestingHospitalId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("RequestingHospitalId")
+                        .HasColumnType("uuid");
 
-                    b.Property<int>("RequestingUserId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("RequestingUserId")
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
@@ -333,26 +328,25 @@ namespace SCIS.Infrastructure.Migrations
 
             modelBuilder.Entity("SCIS.Core.Entities.PatientFeedback", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("uuid")
+                        .HasDefaultValueSql("gen_random_uuid()");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("DoctorId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("DoctorId")
+                        .HasColumnType("uuid");
 
-                    b.Property<int>("HospitalId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("HospitalId")
+                        .HasColumnType("uuid");
 
                     b.Property<bool>("IsProcessed")
                         .HasColumnType("boolean");
 
-                    b.Property<int>("PatientId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("PatientId")
+                        .HasColumnType("uuid");
 
                     b.Property<int>("PostTreatmentRating")
                         .HasColumnType("integer");
@@ -396,11 +390,10 @@ namespace SCIS.Infrastructure.Migrations
 
             modelBuilder.Entity("SCIS.Core.Entities.User", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("uuid")
+                        .HasDefaultValueSql("gen_random_uuid()");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -410,8 +403,8 @@ namespace SCIS.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
-                    b.Property<int?>("HospitalId")
-                        .HasColumnType("integer");
+                    b.Property<Guid?>("HospitalId")
+                        .HasColumnType("uuid");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");

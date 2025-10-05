@@ -5,10 +5,10 @@ namespace SCIS.Core.DTOs;
 public class PatientFeedbackDto
 {
     [Required]
-    public int PatientId { get; set; }
+    public Guid PatientId { get; set; }
     
     [Required]
-    public int DoctorId { get; set; }
+    public Guid DoctorId { get; set; }
     
     [MaxLength(1000)]
     public string? TreatmentDescription { get; set; }
@@ -31,7 +31,7 @@ public class PatientFeedbackDto
 
 public class PatientFeedbackResponseDto
 {
-    public int Id { get; set; }
+    public Guid Id { get; set; }
     public double TreatmentEvaluationScore { get; set; }
     public string? SentimentAnalysis { get; set; }
     public double SentimentScore { get; set; }

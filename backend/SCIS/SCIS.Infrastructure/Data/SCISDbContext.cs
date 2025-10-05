@@ -93,6 +93,10 @@ public class SCISDbContext : DbContext
                             v => v.HasValue ? DateTime.SpecifyKind(v.Value, DateTimeKind.Utc) : v));
                     }
                 }
+                else if (property.ClrType == typeof(Guid))
+                {
+                    property.SetColumnType("uuid");
+                }
             }
         }
 
@@ -100,6 +104,7 @@ public class SCISDbContext : DbContext
         modelBuilder.Entity<User>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasDefaultValueSql("gen_random_uuid()");
             entity.Property(e => e.Username).IsRequired().HasMaxLength(100);
             entity.Property(e => e.Email).IsRequired().HasMaxLength(100);
             entity.Property(e => e.PasswordHash).IsRequired();
@@ -115,6 +120,7 @@ public class SCISDbContext : DbContext
         modelBuilder.Entity<Hospital>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasDefaultValueSql("gen_random_uuid()");
             entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
             entity.Property(e => e.Address).IsRequired().HasMaxLength(500);
             entity.Property(e => e.PhoneNumber).HasMaxLength(20);
@@ -126,6 +132,7 @@ public class SCISDbContext : DbContext
         modelBuilder.Entity<Patient>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasDefaultValueSql("gen_random_uuid()");
             entity.Property(e => e.FirstName).IsRequired().HasMaxLength(100);
             entity.Property(e => e.LastName).IsRequired().HasMaxLength(100);
             entity.Property(e => e.PatientId).IsRequired().HasMaxLength(20);
@@ -143,6 +150,7 @@ public class SCISDbContext : DbContext
         modelBuilder.Entity<PatientConsent>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasDefaultValueSql("gen_random_uuid()");
             entity.Property(e => e.DataType).IsRequired().HasMaxLength(50);
             entity.Property(e => e.Purpose).HasMaxLength(1000);
             entity.Property(e => e.Notes).HasMaxLength(1000);
@@ -167,6 +175,7 @@ public class SCISDbContext : DbContext
         modelBuilder.Entity<DataRequest>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasDefaultValueSql("gen_random_uuid()");
             entity.Property(e => e.DataType).IsRequired().HasMaxLength(50);
             entity.Property(e => e.Purpose).HasMaxLength(1000);
             entity.Property(e => e.Status).IsRequired().HasMaxLength(20);
@@ -193,6 +202,7 @@ public class SCISDbContext : DbContext
         modelBuilder.Entity<PatientFeedback>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasDefaultValueSql("gen_random_uuid()");
             entity.Property(e => e.TreatmentDescription).HasMaxLength(1000);
             entity.Property(e => e.TextFeedback).HasMaxLength(2000);
             entity.Property(e => e.SentimentAnalysis).HasMaxLength(50);
@@ -217,6 +227,7 @@ public class SCISDbContext : DbContext
         modelBuilder.Entity<AuditLog>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasDefaultValueSql("gen_random_uuid()");
             entity.Property(e => e.Action).IsRequired().HasMaxLength(50);
             entity.Property(e => e.EntityType).HasMaxLength(100);
             entity.Property(e => e.Details).HasMaxLength(1000);

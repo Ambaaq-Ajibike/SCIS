@@ -4,7 +4,7 @@ namespace SCIS.Core.Entities;
 
 public class Hospital
 {
-    public int Id { get; set; }
+    public Guid Id { get; set; } = Guid.NewGuid();
     
     [Required]
     [MaxLength(200)]

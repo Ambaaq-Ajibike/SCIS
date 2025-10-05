@@ -4,15 +4,15 @@ namespace SCIS.Core.Entities;
 
 public class PatientFeedback
 {
-    public int Id { get; set; }
+    public Guid Id { get; set; } = Guid.NewGuid();
     
-    public int PatientId { get; set; }
+    public Guid PatientId { get; set; }
     public Patient Patient { get; set; } = null!;
     
-    public int DoctorId { get; set; }
+    public Guid DoctorId { get; set; }
     public User Doctor { get; set; } = null!;
     
-    public int HospitalId { get; set; }
+    public Guid HospitalId { get; set; }
     public Hospital Hospital { get; set; } = null!;
     
     [MaxLength(1000)]

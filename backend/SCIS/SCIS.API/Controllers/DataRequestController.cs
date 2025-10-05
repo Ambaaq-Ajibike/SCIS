@@ -24,7 +24,7 @@ public class DataRequestController : ControllerBase
         try
         {
             var userId = GetCurrentUserId();
-            if (userId == 0)
+            if (userId == Guid.Empty)
                 return Unauthorized(new { message = "Invalid user" });
 
             var response = await _dataRequestService.RequestDataAsync(request, userId);
@@ -42,7 +42,7 @@ public class DataRequestController : ControllerBase
         try
         {
             var userId = GetCurrentUserId();
-            if (userId == 0)
+            if (userId == Guid.Empty)
                 return Unauthorized(new { message = "Invalid user" });
 
             // This would typically fetch from a repository
@@ -55,9 +55,9 @@ public class DataRequestController : ControllerBase
         }
     }
 
-    private int GetCurrentUserId()
+    private Guid GetCurrentUserId()
     {
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        return int.TryParse(userIdClaim, out var userId) ? userId : 0;
+        return Guid.TryParse(userIdClaim, out var userId) ? userId : Guid.Empty;
     }
 }

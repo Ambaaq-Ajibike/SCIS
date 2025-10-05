@@ -4,7 +4,7 @@ namespace SCIS.Core.Entities;
 
 public class Patient
 {
-    public int Id { get; set; }
+    public Guid Id { get; set; } = Guid.NewGuid();
     
     [Required]
     [MaxLength(100)]
@@ -29,7 +29,7 @@ public class Patient
     [MaxLength(100)]
     public string? Email { get; set; }
     
-    public int HospitalId { get; set; }
+    public Guid HospitalId { get; set; }
     public Hospital Hospital { get; set; } = null!;
     
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

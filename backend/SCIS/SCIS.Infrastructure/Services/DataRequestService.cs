@@ -16,7 +16,7 @@ public class DataRequestService : IDataRequestService
         _context = context;
     }
 
-    public async Task<DataRequestResponseDto> RequestDataAsync(DataRequestDto request, int requestingUserId)
+    public async Task<DataRequestResponseDto> RequestDataAsync(DataRequestDto request, Guid requestingUserId)
     {
         var startTime = DateTime.UtcNow;
         var requestingUser = await _context.Users
@@ -44,7 +44,7 @@ public class DataRequestService : IDataRequestService
         var dataRequest = new DataRequest
         {
             RequestingUserId = requestingUserId,
-            RequestingHospitalId = requestingUser.HospitalId ?? 0,
+            RequestingHospitalId = requestingUser.HospitalId ?? Guid.Empty,
             PatientId = request.PatientId,
             DataType = request.DataType,
             Purpose = request.Purpose,
@@ -131,7 +131,7 @@ public class DataRequestService : IDataRequestService
         }
     }
 
-    public async Task<bool> ValidateConsentAsync(int patientId, int requestingUserId, string dataType)
+    public async Task<bool> ValidateConsentAsync(Guid patientId, Guid requestingUserId, string dataType)
     {
         var consent = await _context.PatientConsents
             .FirstOrDefaultAsync(c => c.PatientId == patientId 
@@ -144,7 +144,7 @@ public class DataRequestService : IDataRequestService
         return consent != null;
     }
 
-    public async Task<bool> ValidateRoleAsync(int userId, string dataType)
+    public async Task<bool> ValidateRoleAsync(Guid userId, string dataType)
     {
         var user = await _context.Users.FindAsync(userId);
         if (user == null) return false;
@@ -158,7 +158,7 @@ public class DataRequestService : IDataRequestService
         };
     }
 
-    public async Task<string> FormatAsFHIRAsync(int patientId, string dataType)
+    public async Task<string> FormatAsFHIRAsync(Guid patientId, string dataType)
     {
         var patient = await _context.Patients
             .Include(p => p.Hospital)
@@ -179,7 +179,7 @@ public class DataRequestService : IDataRequestService
         return JsonSerializer.Serialize(fhirData, new JsonSerializerOptions { WriteIndented = true });
     }
 
-    public async Task LogDataRequestAsync(int requestId, bool success, int responseTimeMs, string? errorMessage = null)
+    public async Task LogDataRequestAsync(Guid requestId, bool success, int responseTimeMs, string? errorMessage = null)
     {
         var auditLog = new AuditLog
         {

@@ -4,15 +4,15 @@ namespace SCIS.Core.Entities;
 
 public class DataRequest
 {
-    public int Id { get; set; }
+    public Guid Id { get; set; } = Guid.NewGuid();
     
-    public int RequestingUserId { get; set; }
+    public Guid RequestingUserId { get; set; }
     public User RequestingUser { get; set; } = null!;
     
-    public int RequestingHospitalId { get; set; }
+    public Guid RequestingHospitalId { get; set; }
     public Hospital RequestingHospital { get; set; } = null!;
     
-    public int PatientId { get; set; }
+    public Guid PatientId { get; set; }
     public Patient Patient { get; set; } = null!;
     
     [Required]

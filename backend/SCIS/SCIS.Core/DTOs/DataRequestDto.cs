@@ -5,7 +5,7 @@ namespace SCIS.Core.DTOs;
 public class DataRequestDto
 {
     [Required]
-    public int PatientId { get; set; }
+    public Guid PatientId { get; set; }
     
     [Required]
     [MaxLength(50)]
@@ -17,7 +17,7 @@ public class DataRequestDto
 
 public class DataRequestResponseDto
 {
-    public int Id { get; set; }
+    public Guid Id { get; set; }
     public string Status { get; set; } = string.Empty;
     public string? ResponseData { get; set; }
     public string? DenialReason { get; set; }

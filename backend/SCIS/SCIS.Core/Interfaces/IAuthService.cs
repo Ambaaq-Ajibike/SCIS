@@ -6,7 +6,7 @@ public interface IAuthService
 {
     Task<LoginResponse?> LoginAsync(LoginRequest request);
     Task<bool> ValidateTokenAsync(string token);
-    Task<string> GenerateTokenAsync(int userId, string role, int? hospitalId);
-    Task<bool> HasPermissionAsync(int userId, string permission);
+    Task<string> GenerateTokenAsync(Guid userId, string role, Guid? hospitalId);
+    Task<bool> HasPermissionAsync(Guid userId, string permission);
     Task LogoutAsync(string token);
 }

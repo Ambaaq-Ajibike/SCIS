@@ -4,7 +4,7 @@ namespace SCIS.Core.Entities;
 
 public class User
 {
-    public int Id { get; set; }
+    public Guid Id { get; set; } = Guid.NewGuid();
     
     [Required]
     [MaxLength(100)]
@@ -21,7 +21,7 @@ public class User
     [MaxLength(50)]
     public string Role { get; set; } = string.Empty;
     
-    public int? HospitalId { get; set; }
+    public Guid? HospitalId { get; set; }
     public Hospital? Hospital { get; set; }
     
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

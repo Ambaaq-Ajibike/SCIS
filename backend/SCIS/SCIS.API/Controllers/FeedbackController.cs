@@ -32,7 +32,7 @@ public class FeedbackController : ControllerBase
     }
 
     [HttpGet("doctor/{doctorId}/average-tes")]
-    public async Task<ActionResult<double>> GetDoctorAverageTES(int doctorId)
+    public async Task<ActionResult<double>> GetDoctorAverageTES(Guid doctorId)
     {
         try
         {
@@ -46,7 +46,7 @@ public class FeedbackController : ControllerBase
     }
 
     [HttpGet("hospital/{hospitalId}/average-tes")]
-    public async Task<ActionResult<double>> GetHospitalAverageTES(int hospitalId)
+    public async Task<ActionResult<double>> GetHospitalAverageTES(Guid hospitalId)
     {
         try
         {

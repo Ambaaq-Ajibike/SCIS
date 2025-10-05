@@ -75,7 +75,7 @@ public class AuthService(SCISDbContext _context, IConfiguration _configuration) 
         }
     }
 
-    public async Task<string> GenerateTokenAsync(int userId, string role, int? hospitalId)
+    public async Task<string> GenerateTokenAsync(Guid userId, string role, Guid? hospitalId)
     {
         var tokenHandler = new JwtSecurityTokenHandler();
         var key = Encoding.ASCII.GetBytes(_configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key not configured"));
@@ -100,7 +100,7 @@ public class AuthService(SCISDbContext _context, IConfiguration _configuration) 
         return tokenHandler.WriteToken(token);
     }
 
-    public async Task<bool> HasPermissionAsync(int userId, string permission)
+    public async Task<bool> HasPermissionAsync(Guid userId, string permission)
     {
         var user = await _context.Users.FindAsync(userId);
         if (user == null) return false;
@@ -119,10 +119,10 @@ public class AuthService(SCISDbContext _context, IConfiguration _configuration) 
     {
         // In a real implementation, you might want to blacklist the token
         // For now, we'll just log the logout
-        await LogAuditAsync("Logout", null, null, "Token", 0, "User logged out");
+        await LogAuditAsync("Logout", null, null, "Token", null, "User logged out");
     }
 
-    private async Task LogAuditAsync(string action, int? userId, int? hospitalId, string entityType, int entityId, string details)
+    private async Task LogAuditAsync(string action, Guid? userId, Guid? hospitalId, string entityType, Guid? entityId, string details)
     {
         var auditLog = new AuditLog
         {

@@ -86,7 +86,7 @@ public class FeedbackService(SCISDbContext _context, IMLService _mlService) : IF
         return await _mlService.AnalyzeSentimentAsync(text);
     }
 
-    public async Task<double> GetDoctorAverageTESAsync(int doctorId)
+    public async Task<double> GetDoctorAverageTESAsync(Guid doctorId)
     {
         var average = await _context.PatientFeedbacks
             .Where(f => f.DoctorId == doctorId && f.IsProcessed)
@@ -95,7 +95,7 @@ public class FeedbackService(SCISDbContext _context, IMLService _mlService) : IF
         return average;
     }
 
-    public async Task<double> GetHospitalAverageTESAsync(int hospitalId)
+    public async Task<double> GetHospitalAverageTESAsync(Guid hospitalId)
     {
         var average = await _context.PatientFeedbacks
             .Where(f => f.HospitalId == hospitalId && f.IsProcessed)
@@ -182,13 +182,13 @@ public class FeedbackService(SCISDbContext _context, IMLService _mlService) : IF
         return insights;
     }
 
-    private async Task<int> GetHospitalIdFromDoctorAsync(int doctorId)
+    private async Task<Guid> GetHospitalIdFromDoctorAsync(Guid doctorId)
     {
         var doctor = await _context.Users.FindAsync(doctorId);
-        return doctor?.HospitalId ?? 0;
+        return doctor?.HospitalId ?? Guid.Empty;
     }
 
-    private async Task UpdateHospitalAverageTESAsync(int hospitalId)
+    private async Task UpdateHospitalAverageTESAsync(Guid hospitalId)
     {
         var averageTES = await _context.PatientFeedbacks
             .Where(f => f.HospitalId == hospitalId && f.IsProcessed)

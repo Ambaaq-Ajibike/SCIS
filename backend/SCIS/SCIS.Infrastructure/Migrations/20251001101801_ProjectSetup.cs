@@ -1,13 +1,12 @@
 ﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
-using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
 namespace SCIS.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class Init : Migration
+    public partial class ProjectSetup : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -16,8 +15,7 @@ namespace SCIS.Infrastructure.Migrations
                 name: "Hospitals",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false, defaultValueSql: "gen_random_uuid()"),
                     Name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
                     Address = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
                     PhoneNumber = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
@@ -39,8 +37,7 @@ namespace SCIS.Infrastructure.Migrations
                 name: "Patients",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false, defaultValueSql: "gen_random_uuid()"),
                     FirstName = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
                     LastName = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
                     PatientId = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
@@ -48,7 +45,7 @@ namespace SCIS.Infrastructure.Migrations
                     Gender = table.Column<string>(type: "character varying(10)", maxLength: 10, nullable: false),
                     PhoneNumber = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
                     Email = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
-                    HospitalId = table.Column<int>(type: "integer", nullable: false),
+                    HospitalId = table.Column<Guid>(type: "uuid", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     IsActive = table.Column<bool>(type: "boolean", nullable: false),
                     BiometricConsent = table.Column<bool>(type: "boolean", nullable: false),
@@ -69,13 +66,12 @@ namespace SCIS.Infrastructure.Migrations
                 name: "Users",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false, defaultValueSql: "gen_random_uuid()"),
                     Username = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
                     Email = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
                     PasswordHash = table.Column<string>(type: "text", nullable: false),
                     Role = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
-                    HospitalId = table.Column<int>(type: "integer", nullable: true),
+                    HospitalId = table.Column<Guid>(type: "uuid", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     LastLoginAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     IsActive = table.Column<bool>(type: "boolean", nullable: false)
@@ -95,13 +91,12 @@ namespace SCIS.Infrastructure.Migrations
                 name: "AuditLogs",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false, defaultValueSql: "gen_random_uuid()"),
                     Action = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
-                    UserId = table.Column<int>(type: "integer", nullable: true),
-                    HospitalId = table.Column<int>(type: "integer", nullable: true),
+                    UserId = table.Column<Guid>(type: "uuid", nullable: true),
+                    HospitalId = table.Column<Guid>(type: "uuid", nullable: true),
                     EntityType = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
-                    EntityId = table.Column<int>(type: "integer", nullable: true),
+                    EntityId = table.Column<Guid>(type: "uuid", nullable: true),
                     Details = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
                     Status = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     ErrorMessage = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
@@ -131,11 +126,10 @@ namespace SCIS.Infrastructure.Migrations
                 name: "PatientConsents",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    PatientId = table.Column<int>(type: "integer", nullable: false),
-                    RequestingUserId = table.Column<int>(type: "integer", nullable: false),
-                    RequestingHospitalId = table.Column<int>(type: "integer", nullable: false),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false, defaultValueSql: "gen_random_uuid()"),
+                    PatientId = table.Column<Guid>(type: "uuid", nullable: false),
+                    RequestingUserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    RequestingHospitalId = table.Column<Guid>(type: "uuid", nullable: false),
                     DataType = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     Purpose = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
                     IsConsented = table.Column<bool>(type: "boolean", nullable: false),
@@ -171,11 +165,10 @@ namespace SCIS.Infrastructure.Migrations
                 name: "PatientFeedbacks",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    PatientId = table.Column<int>(type: "integer", nullable: false),
-                    DoctorId = table.Column<int>(type: "integer", nullable: false),
-                    HospitalId = table.Column<int>(type: "integer", nullable: false),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false, defaultValueSql: "gen_random_uuid()"),
+                    PatientId = table.Column<Guid>(type: "uuid", nullable: false),
+                    DoctorId = table.Column<Guid>(type: "uuid", nullable: false),
+                    HospitalId = table.Column<Guid>(type: "uuid", nullable: false),
                     TreatmentDescription = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
                     PreTreatmentRating = table.Column<int>(type: "integer", nullable: false),
                     PostTreatmentRating = table.Column<int>(type: "integer", nullable: false),
@@ -214,11 +207,10 @@ namespace SCIS.Infrastructure.Migrations
                 name: "DataRequests",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    RequestingUserId = table.Column<int>(type: "integer", nullable: false),
-                    RequestingHospitalId = table.Column<int>(type: "integer", nullable: false),
-                    PatientId = table.Column<int>(type: "integer", nullable: false),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false, defaultValueSql: "gen_random_uuid()"),
+                    RequestingUserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    RequestingHospitalId = table.Column<Guid>(type: "uuid", nullable: false),
+                    PatientId = table.Column<Guid>(type: "uuid", nullable: false),
                     DataType = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     Purpose = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
                     Status = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
@@ -229,7 +221,7 @@ namespace SCIS.Infrastructure.Migrations
                     ResponseTimeMs = table.Column<int>(type: "integer", nullable: false),
                     IsConsentValid = table.Column<bool>(type: "boolean", nullable: false),
                     IsRoleAuthorized = table.Column<bool>(type: "boolean", nullable: false),
-                    PatientConsentId = table.Column<int>(type: "integer", nullable: true)
+                    PatientConsentId = table.Column<Guid>(type: "uuid", nullable: true)
                 },
                 constraints: table =>
                 {
