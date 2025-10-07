@@ -12,8 +12,13 @@ const api = axios.create({
 // Request interceptor to add auth token
 api.interceptors.request.use(
   (config) => {
+    // Check for patient token first, then regular token
+    const patientToken = localStorage.getItem('patientToken');
     const token = localStorage.getItem('token');
-    if (token) {
+    
+    if (patientToken) {
+      config.headers.Authorization = `Bearer ${patientToken}`;
+    } else if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
@@ -28,9 +33,17 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
+      // Check if it's a patient token or regular token
+      const patientToken = localStorage.getItem('patientToken');
+      if (patientToken) {
+        localStorage.removeItem('patientToken');
+        localStorage.removeItem('patient');
+        window.location.href = '/patient-login';
+      } else {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }
@@ -42,11 +55,23 @@ export interface LoginRequest {
   password: string;
 }
 
+export interface PatientLoginRequest {
+  patientId: string;
+  password: string;
+}
+
 export interface LoginResponse {
   token: string;
   refreshToken: string;
   expiresAt: string;
   user: User;
+}
+
+export interface PatientLoginResponse {
+  token: string;
+  refreshToken: string;
+  expiresAt: string;
+  patient: Patient;
 }
 
 export interface User {
@@ -163,6 +188,26 @@ export const authService = {
   },
 };
 
+export const patientAuthService = {
+  login: async (credentials: PatientLoginRequest): Promise<PatientLoginResponse> => {
+    const response = await api.post('/patientauth/login', credentials);
+    return response.data;
+  },
+
+  logout: async (): Promise<void> => {
+    await api.post('/patientauth/logout');
+  },
+
+  validateToken: async (): Promise<boolean> => {
+    try {
+      await api.post('/patientauth/validate');
+      return true;
+    } catch {
+      return false;
+    }
+  },
+};
+
 export const feedbackService = {
   submitFeedback: async (feedback: PatientFeedbackDto): Promise<PatientFeedbackResponse> => {
     const response = await api.post('/feedback/submit', feedback);
@@ -181,6 +226,11 @@ export const feedbackService = {
 
   getPerformanceInsights: async (): Promise<any[]> => {
     const response = await api.get('/feedback/insights');
+    return response.data;
+  },
+
+  getPatientHospitalDoctors: async (): Promise<Doctor[]> => {
+    const response = await api.get('/feedback/patient/doctors');
     return response.data;
   },
 };

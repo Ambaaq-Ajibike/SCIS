@@ -29,6 +29,9 @@ public class Patient
     [MaxLength(100)]
     public string? Email { get; set; }
     
+    [Required]
+    public string PasswordHash { get; set; } = string.Empty;
+    
     public Guid HospitalId { get; set; }
     public Hospital Hospital { get; set; } = null!;
     
@@ -40,6 +43,6 @@ public class Patient
     public DateTime? BiometricConsentDate { get; set; }
     
     // Navigation properties
-    public ICollection<PatientConsent> PatientConsents { get; set; } = new List<PatientConsent>();
-    public ICollection<PatientFeedback> PatientFeedbacks { get; set; } = new List<PatientFeedback>();
+    public ICollection<PatientConsent> PatientConsents { get; set; } = [];
+    public ICollection<PatientFeedback> PatientFeedbacks { get; set; } = [];
 }

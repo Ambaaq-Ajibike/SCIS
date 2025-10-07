@@ -4,11 +4,12 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Star, Loader2, CheckCircle, AlertCircle, Search, User, Building2 } from 'lucide-react';
-import { feedbackService, mlService, patientService, hospitalService } from '@/lib/api';
+import { Star, Loader2, CheckCircle, AlertCircle, Search, User, Building2, LogOut } from 'lucide-react';
+import { feedbackService, mlService } from '@/lib/api';
+import { usePatientAuth } from '@/lib/patientAuth';
+import { useRouter } from 'next/navigation';
 
 const feedbackSchema = z.object({
-  patientId: z.string().min(1, 'Patient ID is required'),
   doctorId: z.string().min(1, 'Doctor is required'),
   treatmentDescription: z.string().optional(),
   preTreatmentRating: z.number().min(1).max(5),
@@ -29,35 +30,14 @@ interface Doctor {
   isActive: boolean;
 }
 
-interface Patient {
-  id: string;
-  firstName: string;
-  lastName: string;
-  patientId: string;
-  hospitalId: string;
-  hospitalName: string;
-  isActive: boolean;
-}
-
-interface Hospital {
-  id: string;
-  name: string;
-  address: string;
-  phoneNumber: string;
-  email: string;
-  isActive: boolean;
-  createdAt: string;
-}
-
 export default function FeedbackPage() {
-  const [patient, setPatient] = useState<Patient | null>(null);
-  const [hospitals, setHospitals] = useState<Hospital[]>([]);
+  const { patient, isAuthenticated, logout, isLoading: authLoading } = usePatientAuth();
+  const router = useRouter();
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [filteredDoctors, setFilteredDoctors] = useState<Doctor[]>([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedHospital, setSelectedHospital] = useState<string>('');
   const [showDoctorDropdown, setShowDoctorDropdown] = useState(false);
   const [submissionResult, setSubmissionResult] = useState<{
     success: boolean;
@@ -83,18 +63,19 @@ export default function FeedbackPage() {
 
   const watchedRatings = watch(['preTreatmentRating', 'postTreatmentRating', 'satisfactionRating']);
 
+  // Redirect to login if not authenticated
   useEffect(() => {
-    fetchHospitals();
-  }, []);
-
-  useEffect(() => {
-    if (selectedHospital) {
-      fetchDoctorsByHospital(selectedHospital);
-    } else {
-      setDoctors([]);
-      setFilteredDoctors([]);
+    if (!authLoading && !isAuthenticated) {
+      router.push('/patient-login');
     }
-  }, [selectedHospital]);
+  }, [isAuthenticated, authLoading, router]);
+
+  // Fetch doctors for the patient's hospital
+  useEffect(() => {
+    if (isAuthenticated && patient) {
+      fetchPatientHospitalDoctors();
+    }
+  }, [isAuthenticated, patient]);
 
   useEffect(() => {
     if (searchTerm.length > 2 && doctors.length > 0) {
@@ -110,39 +91,21 @@ export default function FeedbackPage() {
     }
   }, [searchTerm, doctors]);
 
-  const fetchHospitals = async () => {
+  const fetchPatientHospitalDoctors = async () => {
     try {
-      const hospitalsData = await hospitalService.getHospitals();
-      setHospitals(hospitalsData);
-    } catch (error) {
-      console.error('Error fetching hospitals:', error);
-    }
-  };
-
-  const fetchDoctorsByHospital = async (hospitalId: string) => {
-    try {
-      const doctorsData = await hospitalService.getDoctorsByHospital(hospitalId);
+      setLoading(true);
+      const doctorsData = await feedbackService.getPatientHospitalDoctors();
       setDoctors(doctorsData);
     } catch (error) {
       console.error('Error fetching doctors:', error);
-    }
-  };
-
-  const handlePatientIdSubmit = async (patientId: string) => {
-    if (!patientId.trim()) return;
-    
-    setLoading(true);
-    try {
-      const patientData = await patientService.getPatientById(patientId);
-      setPatient(patientData);
-      // Auto-select the patient's hospital
-      setSelectedHospital(patientData.hospitalId);
-    } catch (error) {
-      console.error('Error fetching patient:', error);
-      setPatient(null);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    router.push('/patient-login');
   };
 
   const selectDoctor = (doctor: Doctor) => {
@@ -157,7 +120,7 @@ export default function FeedbackPage() {
 
     try {
       // Validate that all required fields are filled
-      if (!data.patientId || !data.doctorId || data.preTreatmentRating === 0 || data.postTreatmentRating === 0 || data.satisfactionRating === 0) {
+      if (!data.doctorId || data.preTreatmentRating === 0 || data.postTreatmentRating === 0 || data.satisfactionRating === 0) {
         setSubmissionResult({
           success: false,
           message: 'Please fill in all required fields including ratings.',
@@ -166,8 +129,11 @@ export default function FeedbackPage() {
         return;
       }
 
-      // Submit feedback
-      const response = await feedbackService.submitFeedback(data);
+      // Submit feedback (patientId will be set from JWT token on backend)
+      const response = await feedbackService.submitFeedback({
+        ...data,
+        patientId: patient?.id || '', // This will be overridden by backend
+      });
       
       // Analyze sentiment if text feedback provided
       let sentiment = 'Neutral';
@@ -191,9 +157,6 @@ export default function FeedbackPage() {
       setValue('treatmentDescription', '');
       setValue('textFeedback', '');
       setSearchTerm('');
-      setSelectedHospital('');
-      setDoctors([]);
-      setFilteredDoctors([]);
     } catch (error) {
       console.error('Error submitting feedback:', error);
       setSubmissionResult({
@@ -235,6 +198,20 @@ export default function FeedbackPage() {
     </div>
   );
 
+  // Show loading while checking authentication
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary-600" />
+      </div>
+    );
+  }
+
+  // Show login redirect if not authenticated
+  if (!isAuthenticated) {
+    return null; // Will redirect to login
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -245,8 +222,17 @@ export default function FeedbackPage() {
               <Building2 className="h-8 w-8 text-primary-600" />
               <span className="ml-2 text-2xl font-bold text-gray-900">SCIS</span>
             </div>
-            <div className="text-sm text-gray-500">
-              Patient Feedback System
+            <div className="flex items-center space-x-4">
+              <div className="text-sm text-gray-500">
+                Patient Feedback System
+              </div>
+              <button
+                onClick={handleLogout}
+                className="flex items-center text-sm text-gray-600 hover:text-gray-900"
+              >
+                <LogOut className="h-4 w-4 mr-1" />
+                Logout
+              </button>
             </div>
           </div>
         </div>
@@ -292,209 +278,133 @@ export default function FeedbackPage() {
               </div>
             )}
 
-            {!patient ? (
-              /* Patient ID Input */
-              <div className="text-center py-12">
-                <User className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">Enter Your Patient ID</h2>
-                <p className="text-gray-600 mb-6">
-                  Please enter your patient ID to begin submitting feedback
-                </p>
-                <div className="max-w-md mx-auto">
-                  <div className="flex">
-                    <input
-                      type="text"
-                      placeholder="Enter your Patient ID"
-                      className="flex-1 border-gray-300 rounded-l-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm px-3 py-2"
-                      onKeyPress={(e) => {
-                        if (e.key === 'Enter') {
-                          handlePatientIdSubmit((e.target as HTMLInputElement).value);
-                        }
-                      }}
-                    />
-                    <button
-                      onClick={() => {
-                        const input = document.querySelector('input[type="text"]') as HTMLInputElement;
-                        if (input) handlePatientIdSubmit(input.value);
-                      }}
-                      disabled={loading}
-                      className="bg-primary-600 text-white px-4 py-2 rounded-r-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50"
-                    >
-                      {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Continue'}
-                    </button>
-                  </div>
+            {/* Patient Confirmation */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+              <div className="flex items-center">
+                <User className="h-5 w-5 text-blue-600 mr-2" />
+                <div>
+                  <p className="font-medium text-blue-900">
+                    {patient?.firstName} {patient?.lastName}
+                  </p>
+                  <p className="text-sm text-blue-700">
+                    Patient ID: {patient?.patientId} • {patient?.hospitalName}
+                  </p>
                 </div>
               </div>
-            ) : (
-              /* Feedback Form */
-              <div>
-                {/* Patient Confirmation */}
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                  <div className="flex items-center">
-                    <User className="h-5 w-5 text-blue-600 mr-2" />
-                    <div>
-                      <p className="font-medium text-blue-900">
-                        {patient.firstName} {patient.lastName}
-                      </p>
-                      <p className="text-sm text-blue-700">
-                        Patient ID: {patient.patientId} • {patient.hospitalName}
-                      </p>
-                    </div>
-                  </div>
-                </div>
+            </div>
 
-                <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-                  {/* Hospital Selection */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Hospital
-                    </label>
-                    <select
-                      value={selectedHospital}
-                      onChange={(e) => setSelectedHospital(e.target.value)}
-                      className="w-full border border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                    >
-                      <option value="">Select a hospital</option>
-                      {hospitals.map((hospital) => (
-                        <option key={hospital.id} value={hospital.id}>
-                          {hospital.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Doctor Selection */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Doctor
-                    </label>
+            {/* Feedback Form */}
+            <div>
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                {/* Doctor Selection */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Doctor
+                  </label>
+                  <div className="relative">
                     <div className="relative">
-                      <div className="relative">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                        <input
-                          type="text"
-                          value={searchTerm}
-                          onChange={(e) => setSearchTerm(e.target.value)}
-                          placeholder={selectedHospital ? "Search for your doctor by name or specialty..." : "Please select a hospital first"}
-                          disabled={!selectedHospital}
-                          className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
-                        />
-                      </div>
-                      
-                      {showDoctorDropdown && filteredDoctors.length > 0 && (
-                        <div className="absolute z-10 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm">
-                          {filteredDoctors.map((doctor) => (
-                            <button
-                              key={doctor.id}
-                              type="button"
-                              onClick={() => selectDoctor(doctor)}
-                              className="w-full text-left px-4 py-2 hover:bg-gray-100 focus:bg-gray-100"
-                            >
-                              <div className="font-medium text-gray-900">
-                                {doctor.firstName} {doctor.lastName}
-                              </div>
-                              <div className="text-sm text-gray-500">
-                                {doctor.specialty}
-                              </div>
-                            </button>
-                          ))}
-                        </div>
-                      )}
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <input
+                        type="text"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        placeholder="Search for your doctor by name or specialty..."
+                        className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                      />
                     </div>
-                    {errors.doctorId && (
-                      <p className="mt-1 text-sm text-red-600">{errors.doctorId.message}</p>
+                    
+                    {showDoctorDropdown && filteredDoctors.length > 0 && (
+                      <div className="absolute z-10 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm">
+                        {filteredDoctors.map((doctor) => (
+                          <button
+                            key={doctor.id}
+                            type="button"
+                            onClick={() => selectDoctor(doctor)}
+                            className="w-full text-left px-4 py-2 hover:bg-gray-100 focus:bg-gray-100"
+                          >
+                            <div className="font-medium text-gray-900">
+                              {doctor.firstName} {doctor.lastName}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              {doctor.specialty}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
                     )}
                   </div>
+                  {errors.doctorId && (
+                    <p className="mt-1 text-sm text-red-600">{errors.doctorId.message}</p>
+                  )}
+                </div>
 
-                  {/* Treatment Description */}
-                  <div>
-                    <label htmlFor="treatmentDescription" className="block text-sm font-medium text-gray-700">
-                      Treatment Description (Optional)
-                    </label>
-                    <textarea
-                      {...register('treatmentDescription')}
-                      rows={3}
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                      placeholder="Describe the treatment you received..."
-                    />
-                  </div>
+                {/* Treatment Description */}
+                <div>
+                  <label htmlFor="treatmentDescription" className="block text-sm font-medium text-gray-700">
+                    Treatment Description (Optional)
+                  </label>
+                  <textarea
+                    {...register('treatmentDescription')}
+                    rows={3}
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                    placeholder="Describe the treatment you received..."
+                  />
+                </div>
 
-                  {/* Ratings */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <StarRating
-                      value={watchedRatings[0]}
-                      onChange={(value) => setValue('preTreatmentRating', value)}
-                      label="Pre-Treatment Rating"
-                    />
-                    <StarRating
-                      value={watchedRatings[1]}
-                      onChange={(value) => setValue('postTreatmentRating', value)}
-                      label="Post-Treatment Rating"
-                    />
-                    <StarRating
-                      value={watchedRatings[2]}
-                      onChange={(value) => setValue('satisfactionRating', value)}
-                      label="Overall Satisfaction"
-                    />
-                  </div>
+                {/* Ratings */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <StarRating
+                    value={watchedRatings[0]}
+                    onChange={(value) => setValue('preTreatmentRating', value)}
+                    label="Pre-Treatment Rating"
+                  />
+                  <StarRating
+                    value={watchedRatings[1]}
+                    onChange={(value) => setValue('postTreatmentRating', value)}
+                    label="Post-Treatment Rating"
+                  />
+                  <StarRating
+                    value={watchedRatings[2]}
+                    onChange={(value) => setValue('satisfactionRating', value)}
+                    label="Overall Satisfaction"
+                  />
+                </div>
 
-                  {/* Text Feedback */}
-                  <div>
-                    <label htmlFor="textFeedback" className="block text-sm font-medium text-gray-700">
-                      Additional Feedback (Optional)
-                    </label>
-                    <textarea
-                      {...register('textFeedback')}
-                      rows={4}
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                      placeholder="Share your experience, suggestions, or any additional comments..."
-                    />
-                    <p className="mt-1 text-sm text-gray-500">
-                      Your feedback will be analyzed for sentiment and used to improve healthcare services.
-                    </p>
-                  </div>
+                {/* Text Feedback */}
+                <div>
+                  <label htmlFor="textFeedback" className="block text-sm font-medium text-gray-700">
+                    Additional Feedback (Optional)
+                  </label>
+                  <textarea
+                    {...register('textFeedback')}
+                    rows={4}
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                    placeholder="Share your experience, suggestions, or any additional comments..."
+                  />
+                  <p className="mt-1 text-sm text-gray-500">
+                    Your feedback will be analyzed for sentiment and used to improve healthcare services.
+                  </p>
+                </div>
 
-                  {/* Submit Button */}
-                  <div className="flex justify-end space-x-4">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setPatient(null);
-                        setValue('patientId', '');
-                        setValue('doctorId', '');
-                        setValue('preTreatmentRating', 0);
-                        setValue('postTreatmentRating', 0);
-                        setValue('satisfactionRating', 0);
-                        setValue('treatmentDescription', '');
-                        setValue('textFeedback', '');
-                        setSearchTerm('');
-                        setSelectedHospital('');
-                        setDoctors([]);
-                        setFilteredDoctors([]);
-                        setSubmissionResult(null);
-                      }}
-                      className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-                    >
-                      Start Over
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={submitting}
-                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {submitting ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                          Submitting...
-                        </>
-                      ) : (
-                        'Submit Feedback'
-                      )}
-                    </button>
-                  </div>
-                </form>
-              </div>
-            )}
+                {/* Submit Button */}
+                <div className="flex justify-end">
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {submitting ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        Submitting...
+                      </>
+                    ) : (
+                      'Submit Feedback'
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       </div>

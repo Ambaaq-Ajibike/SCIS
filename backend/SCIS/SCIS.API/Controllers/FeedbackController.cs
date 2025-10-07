@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SCIS.Core.DTOs;
 using SCIS.Core.Interfaces;
+using System.Security.Claims;
 
 namespace SCIS.API.Controllers;
 
@@ -22,6 +23,18 @@ public class FeedbackController : ControllerBase
     {
         try
         {
+            // Get patient ID from JWT token
+            var patientIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userTypeClaim = User.FindFirst("userType")?.Value;
+            
+            if (string.IsNullOrEmpty(patientIdClaim) || userTypeClaim != "Patient")
+            {
+                return Unauthorized(new { message = "Patient authentication required" });
+            }
+
+            // Override the patient ID from the token
+            feedback.PatientId = Guid.Parse(patientIdClaim);
+            
             var response = await _feedbackService.SubmitFeedbackAsync(feedback);
             return Ok(response);
         }
@@ -70,6 +83,29 @@ public class FeedbackController : ControllerBase
         catch (Exception ex)
         {
             return StatusCode(500, new { message = "An error occurred while fetching performance insights", error = ex.Message });
+        }
+    }
+
+    [HttpGet("patient/doctors")]
+    public async Task<ActionResult<List<object>>> GetPatientHospitalDoctors()
+    {
+        try
+        {
+            // Get patient hospital ID from JWT token
+            var hospitalIdClaim = User.FindFirst("hospitalId")?.Value;
+            var userTypeClaim = User.FindFirst("userType")?.Value;
+            
+            if (string.IsNullOrEmpty(hospitalIdClaim) || userTypeClaim != "Patient")
+            {
+                return Unauthorized(new { message = "Patient authentication required" });
+            }
+
+            var doctors = await _feedbackService.GetDoctorsByHospitalAsync(Guid.Parse(hospitalIdClaim));
+            return Ok(doctors);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "An error occurred while fetching doctors", error = ex.Message });
         }
     }
 }

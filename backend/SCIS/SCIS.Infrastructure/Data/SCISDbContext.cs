@@ -139,6 +139,7 @@ public class SCISDbContext : DbContext
             entity.Property(e => e.Gender).HasMaxLength(10);
             entity.Property(e => e.PhoneNumber).HasMaxLength(20);
             entity.Property(e => e.Email).HasMaxLength(100);
+            entity.Property(e => e.PasswordHash).IsRequired();
             
             entity.HasOne(e => e.Hospital)
                 .WithMany(h => h.Patients)

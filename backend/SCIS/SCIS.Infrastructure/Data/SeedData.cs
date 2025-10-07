@@ -14,6 +14,7 @@ public static class SeedData
         context.PatientFeedbacks.RemoveRange(await context.PatientFeedbacks.ToListAsync());
         context.PatientConsents.RemoveRange(await context.PatientConsents.ToListAsync());
         context.Users.RemoveRange(await context.Users.ToListAsync());
+        context.Patients.RemoveRange(await context.Patients.ToListAsync());
         context.Hospitals.RemoveRange(await context.Hospitals.ToListAsync());
         await context.SaveChangesAsync();
 
@@ -50,11 +51,11 @@ public static class SeedData
         await context.SaveChangesAsync();
 
         // Create patients
-        var patient1 = new Patient { FirstName = "John", LastName = "Doe", PatientId = "PAT001", DateOfBirth = DateTime.SpecifyKind(new DateTime(1985, 5, 15), DateTimeKind.Utc), Gender = "Male", PhoneNumber = "555-1001", Email = "john.doe@email.com", HospitalId = hospital1.Id, BiometricConsent = true, BiometricConsentDate = DateTime.UtcNow.AddDays(-30) };
-        var patient2 = new Patient { FirstName = "Jane", LastName = "Smith", PatientId = "PAT002", DateOfBirth = DateTime.SpecifyKind(new DateTime(1990, 8, 22), DateTimeKind.Utc), Gender = "Female", PhoneNumber = "555-1002", Email = "jane.smith@email.com", HospitalId = hospital2.Id, BiometricConsent = true, BiometricConsentDate = DateTime.UtcNow.AddDays(-15) };
-        var patient3 = new Patient { FirstName = "Mike", LastName = "Johnson", PatientId = "PAT003", DateOfBirth = DateTime.SpecifyKind(new DateTime(1978, 12, 3), DateTimeKind.Utc), Gender = "Male", PhoneNumber = "555-1003", Email = "mike.johnson@email.com", HospitalId = hospital3.Id, BiometricConsent = true, BiometricConsentDate = DateTime.UtcNow.AddDays(-7) };
-        var patient4 = new Patient { FirstName = "Sarah", LastName = "Williams", PatientId = "PAT004", DateOfBirth = DateTime.SpecifyKind(new DateTime(1992, 3, 18), DateTimeKind.Utc), Gender = "Female", PhoneNumber = "555-1004", Email = "sarah.williams@email.com", HospitalId = hospital4.Id, BiometricConsent = true, BiometricConsentDate = DateTime.UtcNow.AddDays(-20) };
-        var patient5 = new Patient { FirstName = "David", LastName = "Brown", PatientId = "PAT005", DateOfBirth = DateTime.SpecifyKind(new DateTime(1988, 7, 9), DateTimeKind.Utc), Gender = "Male", PhoneNumber = "555-1005", Email = "david.brown@email.com", HospitalId = hospital5.Id, BiometricConsent = true, BiometricConsentDate = DateTime.UtcNow.AddDays(-10) };
+        var patient1 = new Patient { FirstName = "John", LastName = "Doe", PatientId = "PAT001", DateOfBirth = DateTime.SpecifyKind(new DateTime(1985, 5, 15), DateTimeKind.Utc), Gender = "Male", PhoneNumber = "555-1001", Email = "john.doe@email.com", PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"), HospitalId = hospital1.Id, BiometricConsent = true, BiometricConsentDate = DateTime.UtcNow.AddDays(-30) };
+        var patient2 = new Patient { FirstName = "Jane", LastName = "Smith", PatientId = "PAT002", DateOfBirth = DateTime.SpecifyKind(new DateTime(1990, 8, 22), DateTimeKind.Utc), Gender = "Female", PhoneNumber = "555-1002", Email = "jane.smith@email.com", PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"), HospitalId = hospital2.Id, BiometricConsent = true, BiometricConsentDate = DateTime.UtcNow.AddDays(-15) };
+        var patient3 = new Patient { FirstName = "Mike", LastName = "Johnson", PatientId = "PAT003", DateOfBirth = DateTime.SpecifyKind(new DateTime(1978, 12, 3), DateTimeKind.Utc), Gender = "Male", PhoneNumber = "555-1003", Email = "mike.johnson@email.com", PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"), HospitalId = hospital3.Id, BiometricConsent = true, BiometricConsentDate = DateTime.UtcNow.AddDays(-7) };
+        var patient4 = new Patient { FirstName = "Sarah", LastName = "Williams", PatientId = "PAT004", DateOfBirth = DateTime.SpecifyKind(new DateTime(1992, 3, 18), DateTimeKind.Utc), Gender = "Female", PhoneNumber = "555-1004", Email = "sarah.williams@email.com", PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"), HospitalId = hospital4.Id, BiometricConsent = true, BiometricConsentDate = DateTime.UtcNow.AddDays(-20) };
+        var patient5 = new Patient { FirstName = "David", LastName = "Brown", PatientId = "PAT005", DateOfBirth = DateTime.SpecifyKind(new DateTime(1988, 7, 9), DateTimeKind.Utc), Gender = "Male", PhoneNumber = "555-1005", Email = "david.brown@email.com", PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"), HospitalId = hospital5.Id, BiometricConsent = true, BiometricConsentDate = DateTime.UtcNow.AddDays(-10) };
 
         context.Patients.AddRange(patient1, patient2, patient3, patient4, patient5);
         await context.SaveChangesAsync();

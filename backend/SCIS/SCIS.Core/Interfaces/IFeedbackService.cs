@@ -10,4 +10,5 @@ public interface IFeedbackService
     Task<double> GetDoctorAverageTESAsync(Guid doctorId);
     Task<double> GetHospitalAverageTESAsync(Guid hospitalId);
     Task<List<object>> GetPerformanceInsightsAsync();
+    Task<List<object>> GetDoctorsByHospitalAsync(Guid hospitalId);
 }

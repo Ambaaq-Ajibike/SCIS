@@ -182,6 +182,28 @@ public class FeedbackService(SCISDbContext _context, IMLService _mlService) : IF
         return insights;
     }
 
+    public async Task<List<object>> GetDoctorsByHospitalAsync(Guid hospitalId)
+    {
+        var doctors = await _context.Users
+            .Where(u => u.Role == "Doctor" && u.HospitalId == hospitalId && u.IsActive)
+            .Include(u => u.Hospital)
+            .ToListAsync();
+
+        var result = doctors.Select(d => new
+        {
+            Id = d.Id,
+            FirstName = d.Username.Contains(' ') ? d.Username.Split(' ')[0] : d.Username,
+            LastName = d.Username.Contains(' ') ? string.Join(" ", d.Username.Split(' ').Skip(1)) : "",
+            Email = d.Email,
+            Specialty = "General Medicine", // You might want to add specialty to User entity
+            HospitalId = d.HospitalId,
+            HospitalName = d.Hospital?.Name ?? "Unknown Hospital",
+            IsActive = d.IsActive
+        }).Cast<object>().ToList();
+
+        return result;
+    }
+
     private async Task<Guid> GetHospitalIdFromDoctorAsync(Guid doctorId)
     {
         var doctor = await _context.Users.FindAsync(doctorId);

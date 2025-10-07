@@ -65,6 +65,7 @@ builder.Services.AddAuthorization();
 
 // Services
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IPatientAuthService, PatientAuthService>();
 builder.Services.AddScoped<IDataRequestService, DataRequestService>();
 builder.Services.AddScoped<IFeedbackService, FeedbackService>();
 builder.Services.AddScoped<IMLService, MLService>();
@@ -100,7 +101,7 @@ using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<SCISDbContext>();
     context.Database.EnsureCreated();
-    //await SCIS.Infrastructure.Data.SeedData.SeedAsync(context);
+    await SCIS.Infrastructure.Data.SeedData.SeedAsync(context);
 }
 
 app.Run();
