@@ -27,12 +27,11 @@ export default function Layout({ children }: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const navigation = [
-    { name: 'Dashboard', href: '/dashboard', icon: BarChart3, roles: ['HospitalManager', 'Doctor', 'Staff', 'Patient'] },
-    { name: 'Patients', href: '/patients', icon: Users, roles: ['HospitalManager', 'Doctor', 'Staff'] },
-    { name: 'Feedback', href: '/feedback', icon: MessageSquare, roles: ['HospitalManager', 'Doctor', 'Staff', 'Patient'] },
-    { name: 'Data Requests', href: '/data-requests', icon: Database, roles: ['HospitalManager', 'Doctor', 'Staff'] },
-    { name: 'Analytics', href: '/analytics', icon: Brain, roles: ['HospitalManager', 'Doctor'] },
-    { name: 'Hospitals', href: '/hospitals', icon: Building2, roles: ['HospitalManager'] },
+    { name: 'Dashboard', href: '/dashboard', icon: BarChart3, roles: ['SystemManager', 'HospitalManager', 'Doctor', 'Staff', 'Patient'] },
+    { name: 'Patients', href: '/patients', icon: Users, roles: ['SystemManager', 'HospitalManager', 'Doctor', 'Staff'] },
+    { name: 'Data Requests', href: '/data-requests', icon: Database, roles: ['SystemManager', 'HospitalManager', 'Doctor', 'Staff'] },
+    { name: 'Analytics', href: '/analytics', icon: Brain, roles: ['SystemManager', 'HospitalManager', 'Doctor'] },
+    { name: 'Hospitals', href: '/hospitals', icon: Building2, roles: ['SystemManager'] },
   ];
 
   const filteredNavigation = navigation.filter(item => 
@@ -119,7 +118,7 @@ export default function Layout({ children }: LayoutProps) {
       </div>
 
       {/* Main content */}
-      <div className="lg:pl-64 flex flex-col min-h-screen">
+      <div className="lg:pl-64 flex flex-col min-h-screen w-full">
         {/* Top navigation for mobile */}
         <div className="sticky top-0 z-10 lg:hidden pl-1 pt-1 sm:pl-3 sm:pt-3 bg-gray-50">
           <button
@@ -133,7 +132,7 @@ export default function Layout({ children }: LayoutProps) {
 
         {/* Page header */}
         <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-10">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="w-full px-4 sm:px-6 lg:px-8"></div>
             <div className="flex justify-between items-center py-4">
               <div className="flex items-center">
                 <h1 className="text-2xl font-semibold text-gray-900">SCIS Admin Dashboard</h1>
@@ -155,7 +154,7 @@ export default function Layout({ children }: LayoutProps) {
         </header>
 
         {/* Main content area */}
-        <main className="flex-1 bg-gray-50">
+        <main className="flex-1 bg-gray-50 w-full">
           {children}
         </main>
       </div>

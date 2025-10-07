@@ -53,7 +53,7 @@ export interface User {
   id: string;
   username: string;
   email: string;
-  role: string;
+  role: 'SystemManager' | 'HospitalManager' | 'Doctor' | 'Staff' | 'Patient';
   hospitalId?: string;
   hospitalName?: string;
 }
@@ -125,11 +125,21 @@ export interface Doctor {
   id: string;
   firstName: string;
   lastName: string;
-  email: string;
+  email?: string;
   specialty: string;
   hospitalId: string;
-  hospital: Hospital;
+  hospitalName: string;
   isActive: boolean;
+}
+
+export interface HospitalDto {
+  id: string;
+  name: string;
+  address: string;
+  phoneNumber: string;
+  email: string;
+  isActive: boolean;
+  createdAt: string;
 }
 
 // API Services
@@ -215,6 +225,25 @@ export const mlService = {
 
   getResourceRecommendations: async (hospitalId: number): Promise<any[]> => {
     const response = await api.get(`/ml/recommendations/${hospitalId}`);
+    return response.data;
+  },
+};
+
+export const patientService = {
+  getPatientById: async (patientId: string): Promise<Patient> => {
+    const response = await api.get(`/patient/${patientId}`);
+    return response.data;
+  },
+};
+
+export const hospitalService = {
+  getHospitals: async (): Promise<HospitalDto[]> => {
+    const response = await api.get('/hospital');
+    return response.data;
+  },
+
+  getDoctorsByHospital: async (hospitalId: string): Promise<Doctor[]> => {
+    const response = await api.get(`/hospital/${hospitalId}/doctors`);
     return response.data;
   },
 };

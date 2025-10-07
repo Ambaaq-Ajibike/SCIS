@@ -41,7 +41,7 @@ export default function LoginPage() {
             Sign in to SCIS
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            Smart Clinical Information System
+            Smart Connected Integrated System
           </p>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
@@ -116,6 +116,7 @@ export default function LoginPage() {
               Demo Credentials:
             </p>
             <div className="mt-2 text-xs text-gray-500 space-y-1">
+              <p><strong>System Manager:</strong> admin@scis.com / password123</p>
               <p><strong>Hospital Manager:</strong> manager1@citygeneral.com / password123</p>
               <p><strong>Doctor:</strong> sarah.johnson@citygeneral.com / password123</p>
               <p><strong>Staff:</strong> staff1@citygeneral.com / password123</p>

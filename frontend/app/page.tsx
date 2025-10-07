@@ -14,7 +14,7 @@ export default function HomePage() {
       if (isAuthenticated) {
         router.push('/dashboard');
       } else {
-        router.push('/login');
+        router.push('/landing');
       }
     }
   }, [isAuthenticated, isLoading, router]);
@@ -24,7 +24,7 @@ export default function HomePage() {
       <div className="text-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary-600 mx-auto mb-4" />
         <p className="text-gray-600">Loading SCIS...</p>
-            </div>
-          </div>
+      </div>
+    </div>
   );
 }
