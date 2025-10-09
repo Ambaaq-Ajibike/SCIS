@@ -300,4 +300,31 @@ export const hospitalService = {
   },
 };
 
+export const dashboardService = {
+  getDashboardStats: async (): Promise<any> => {
+    const response = await api.get('/dashboard/stats');
+    return response.data;
+  },
+
+  getHospitalPerformance: async (): Promise<any[]> => {
+    const response = await api.get('/dashboard/hospital-performance');
+    return response.data;
+  },
+
+  getSentimentAnalysis: async (): Promise<any[]> => {
+    const response = await api.get('/dashboard/sentiment-analysis');
+    return response.data;
+  },
+
+  getDoctors: async (): Promise<any[]> => {
+    const response = await api.get('/dashboard/doctors');
+    return response.data;
+  },
+
+  getPatients: async (): Promise<any[]> => {
+    const response = await api.get('/dashboard/patients');
+    return response.data;
+  },
+};
+
 export default api;
