@@ -113,7 +113,11 @@ export default function DataRequestsPage() {
   const onSubmit = async (data: RequestFormData) => {
     setSubmitting(true);
     try {
-      const response = await dataRequestService.requestData(data);
+      const response = await dataRequestService.requestData({
+        patientId: data.patientId || '',
+        dataType: data.dataType || '',
+        purpose: data.purpose
+      });
       setRequests(prev => [response, ...prev]);
       setShowNewRequest(false);
       reset();

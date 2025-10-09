@@ -125,7 +125,7 @@ export default function PatientsPage() {
     return matchesSearch && matchesStatus && matchesHospital;
   });
 
-  const hospitals = [...new Set(patients.map(p => p.hospitalName))];
+  const hospitals = Array.from(new Set(patients.map(p => p.hospitalName)));
 
   const getAge = (dateOfBirth: string) => {
     const today = new Date();

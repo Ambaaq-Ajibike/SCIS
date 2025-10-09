@@ -76,14 +76,14 @@ public class MLService : IMLService
         // Create a simple sentiment analysis model
         var data = new List<SentimentData>
         {
-            new() { Text = "Great service, very helpful", Sentiment = true },
-            new() { Text = "Excellent treatment, highly recommend", Sentiment = true },
-            new() { Text = "Outstanding care and attention", Sentiment = true },
-            new() { Text = "Poor service, very disappointed", Sentiment = false },
-            new() { Text = "Terrible experience, would not recommend", Sentiment = false },
-            new() { Text = "Awful treatment, very upset", Sentiment = false },
-            new() { Text = "Average service, nothing special", Sentiment = false },
-            new() { Text = "Okay treatment, could be better", Sentiment = false }
+            new() { Text = "Great service, very helpful", Label = true },
+            new() { Text = "Excellent treatment, highly recommend", Label = true },
+            new() { Text = "Outstanding care and attention", Label = true },
+            new() { Text = "Poor service, very disappointed", Label = false },
+            new() { Text = "Terrible experience, would not recommend", Label = false },
+            new() { Text = "Awful treatment, very upset", Label = false },
+            new() { Text = "Average service, nothing special", Label = false },
+            new() { Text = "Okay treatment, could be better", Label = false }
         };
 
         var dataView = _mlContext.Data.LoadFromEnumerable(data);

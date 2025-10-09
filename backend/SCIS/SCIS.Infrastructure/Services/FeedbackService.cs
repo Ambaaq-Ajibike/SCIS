@@ -191,17 +191,76 @@ public class FeedbackService(SCISDbContext _context, IMLService _mlService) : IF
 
         var result = doctors.Select(d => new
         {
-            Id = d.Id,
-            FirstName = d.Username.Contains(' ') ? d.Username.Split(' ')[0] : d.Username,
-            LastName = d.Username.Contains(' ') ? string.Join(" ", d.Username.Split(' ').Skip(1)) : "",
+            Id = d.Id.ToString(),
+            FirstName = ExtractFirstName(d.Username),
+            LastName = ExtractLastName(d.Username),
             Email = d.Email,
             Specialty = "General Medicine", // You might want to add specialty to User entity
-            HospitalId = d.HospitalId,
+            HospitalId = d.HospitalId?.ToString() ?? "",
             HospitalName = d.Hospital?.Name ?? "Unknown Hospital",
             IsActive = d.IsActive
         }).Cast<object>().ToList();
 
         return result;
+    }
+
+    private static string ExtractFirstName(string username)
+    {
+        if (string.IsNullOrEmpty(username))
+            return "";
+
+        // Handle doctor usernames like "dr_sarah_johnson"
+        if (username.StartsWith("dr_"))
+        {
+            var parts = username.Substring(3).Split('_'); // Remove "dr_" prefix
+            return parts.Length > 0 ? CapitalizeFirst(parts[0]) : "";
+        }
+
+        // Handle regular usernames with spaces
+        if (username.Contains(' '))
+        {
+            return CapitalizeFirst(username.Split(' ')[0]);
+        }
+
+        // Single word username
+        return CapitalizeFirst(username);
+    }
+
+    private static string ExtractLastName(string username)
+    {
+        if (string.IsNullOrEmpty(username))
+            return "";
+
+        // Handle doctor usernames like "dr_sarah_johnson"
+        if (username.StartsWith("dr_"))
+        {
+            var parts = username.Substring(3).Split('_'); // Remove "dr_" prefix
+            if (parts.Length > 1)
+            {
+                return CapitalizeFirst(string.Join(" ", parts.Skip(1)));
+            }
+            return "";
+        }
+
+        // Handle regular usernames with spaces
+        if (username.Contains(' '))
+        {
+            var parts = username.Split(' ');
+            if (parts.Length > 1)
+            {
+                return CapitalizeFirst(string.Join(" ", parts.Skip(1)));
+            }
+        }
+
+        return "";
+    }
+
+    private static string CapitalizeFirst(string text)
+    {
+        if (string.IsNullOrEmpty(text))
+            return "";
+        
+        return char.ToUpper(text[0]) + text.Substring(1).ToLower();
     }
 
     private async Task<Guid> GetHospitalIdFromDoctorAsync(Guid doctorId)

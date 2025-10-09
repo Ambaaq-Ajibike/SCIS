@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Star, Loader2, CheckCircle, AlertCircle, Search, User, Building2, LogOut } from 'lucide-react';
+import { Star, Loader2, CheckCircle, AlertCircle, Search, User, Building2, LogOut, X } from 'lucide-react';
 import { feedbackService, mlService } from '@/lib/api';
 import { usePatientAuth } from '@/lib/patientAuth';
 import { useRouter } from 'next/navigation';
@@ -45,6 +45,7 @@ export default function FeedbackPage() {
     tes?: number;
     sentiment?: string;
   } | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const {
     register,
@@ -78,23 +79,58 @@ export default function FeedbackPage() {
   }, [isAuthenticated, patient]);
 
   useEffect(() => {
-    if (searchTerm.length > 2 && doctors.length > 0) {
-      const filtered = doctors.filter(doctor =>
-        `${doctor.firstName} ${doctor.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        doctor.specialty.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+    console.log('Search effect triggered:', { searchTerm, doctorsCount: doctors.length });
+    
+    // Check if a doctor is already selected (searchTerm contains " - " which indicates selection)
+    const isDoctorSelected = searchTerm.includes(' - ');
+    
+    if (isDoctorSelected) {
+      // If doctor is selected, don't show dropdown
+      setFilteredDoctors([]);
+      setShowDoctorDropdown(false);
+      return;
+    }
+    
+    if (searchTerm.length > 0 && doctors.length > 0) {
+      const filtered = doctors.filter(doctor => {
+        const fullName = `${doctor.firstName} ${doctor.lastName}`.toLowerCase();
+        const specialty = doctor.specialty.toLowerCase();
+        const searchLower = searchTerm.toLowerCase();
+        
+        return fullName.includes(searchLower) || 
+               specialty.includes(searchLower) ||
+               doctor.firstName.toLowerCase().includes(searchLower) ||
+               doctor.lastName.toLowerCase().includes(searchLower);
+      });
+      console.log('Filtered doctors:', filtered);
       setFilteredDoctors(filtered);
-      setShowDoctorDropdown(true);
+      setShowDoctorDropdown(filtered.length > 0);
     } else {
       setFilteredDoctors([]);
       setShowDoctorDropdown(false);
     }
   }, [searchTerm, doctors]);
 
+  // Handle click outside to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowDoctorDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   const fetchPatientHospitalDoctors = async () => {
     try {
       setLoading(true);
+      console.log('Fetching doctors for patient hospital...');
       const doctorsData = await feedbackService.getPatientHospitalDoctors();
+      console.log('Fetched doctors:', doctorsData);
       setDoctors(doctorsData);
     } catch (error) {
       console.error('Error fetching doctors:', error);
@@ -110,8 +146,16 @@ export default function FeedbackPage() {
 
   const selectDoctor = (doctor: Doctor) => {
     setValue('doctorId', doctor.id);
-    setSearchTerm(`${doctor.firstName} ${doctor.lastName} - ${doctor.specialty} (${doctor.hospitalName})`);
+    setSearchTerm(`${doctor.firstName} ${doctor.lastName} - ${doctor.specialty}`);
     setShowDoctorDropdown(false);
+    setFilteredDoctors([]);
+  };
+
+  const clearDoctorSelection = () => {
+    setValue('doctorId', '');
+    setSearchTerm('');
+    setShowDoctorDropdown(false);
+    setFilteredDoctors([]);
   };
 
   const onSubmit = async (data: FeedbackFormData) => {
@@ -131,8 +175,13 @@ export default function FeedbackPage() {
 
       // Submit feedback (patientId will be set from JWT token on backend)
       const response = await feedbackService.submitFeedback({
-        ...data,
         patientId: patient?.id || '', // This will be overridden by backend
+        doctorId: data.doctorId,
+        treatmentDescription: data.treatmentDescription,
+        preTreatmentRating: data.preTreatmentRating,
+        postTreatmentRating: data.postTreatmentRating,
+        satisfactionRating: data.satisfactionRating,
+        textFeedback: data.textFeedback,
       });
       
       // Analyze sentiment if text feedback provided
@@ -287,7 +336,7 @@ export default function FeedbackPage() {
                     {patient?.firstName} {patient?.lastName}
                   </p>
                   <p className="text-sm text-blue-700">
-                    Patient ID: {patient?.patientId} • {patient?.hospitalName}
+                    Patient ID: {patient?.patientId} • {patient?.hospitalName || 'Unknown Hospital'}
                   </p>
                 </div>
               </div>
@@ -299,18 +348,37 @@ export default function FeedbackPage() {
                 {/* Doctor Selection */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Doctor
+                    Doctor *
                   </label>
-                  <div className="relative">
+                  <div className="relative" ref={dropdownRef}>
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                       <input
                         type="text"
                         value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
+                        onChange={(e) => {
+                          setSearchTerm(e.target.value);
+                          if (e.target.value === '') {
+                            setValue('doctorId', '');
+                          }
+                        }}
+                        onFocus={() => {
+                          if (filteredDoctors.length > 0) {
+                            setShowDoctorDropdown(true);
+                          }
+                        }}
                         placeholder="Search for your doctor by name or specialty..."
-                        className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                        className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                       />
+                      {searchTerm.includes(' - ') && (
+                        <button
+                          type="button"
+                          onClick={clearDoctorSelection}
+                          className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-gray-600"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      )}
                     </div>
                     
                     {showDoctorDropdown && filteredDoctors.length > 0 && (
@@ -326,15 +394,24 @@ export default function FeedbackPage() {
                               {doctor.firstName} {doctor.lastName}
                             </div>
                             <div className="text-sm text-gray-500">
-                              {doctor.specialty}
+                              {doctor.specialty} • {doctor.hospitalName}
                             </div>
                           </button>
                         ))}
                       </div>
                     )}
+                    
+                    {searchTerm.length > 0 && filteredDoctors.length === 0 && !searchTerm.includes(' - ') && (
+                      <div className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md py-2 text-sm text-gray-500 text-center">
+                        No doctors found matching "{searchTerm}"
+                      </div>
+                    )}
                   </div>
                   {errors.doctorId && (
                     <p className="mt-1 text-sm text-red-600">{errors.doctorId.message}</p>
+                  )}
+                  {loading && (
+                    <p className="mt-1 text-sm text-gray-500">Loading doctors...</p>
                   )}
                 </div>
 
@@ -346,7 +423,7 @@ export default function FeedbackPage() {
                   <textarea
                     {...register('treatmentDescription')}
                     rows={3}
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm p-4"
                     placeholder="Describe the treatment you received..."
                   />
                 </div>
@@ -378,7 +455,7 @@ export default function FeedbackPage() {
                   <textarea
                     {...register('textFeedback')}
                     rows={4}
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm p-4"
                     placeholder="Share your experience, suggestions, or any additional comments..."
                   />
                   <p className="mt-1 text-sm text-gray-500">

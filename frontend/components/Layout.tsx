@@ -132,7 +132,7 @@ export default function Layout({ children }: LayoutProps) {
 
         {/* Page header */}
         <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-10">
-          <div className="w-full px-4 sm:px-6 lg:px-8"></div>
+          <div className="w-full px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center py-4">
               <div className="flex items-center">
                 <h1 className="text-2xl font-semibold text-gray-900">SCIS Admin Dashboard</h1>

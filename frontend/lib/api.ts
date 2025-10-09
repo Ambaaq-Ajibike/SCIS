@@ -140,6 +140,7 @@ export interface Patient {
   email?: string;
   hospitalId: string;
   hospital: Hospital;
+  hospitalName: string;
   isActive: boolean;
   biometricConsent: boolean;
   biometricConsentDate?: string;
@@ -231,6 +232,7 @@ export const feedbackService = {
 
   getPatientHospitalDoctors: async (): Promise<Doctor[]> => {
     const response = await api.get('/feedback/patient/doctors');
+    console.log({response})
     return response.data;
   },
 };

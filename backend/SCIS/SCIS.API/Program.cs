@@ -101,7 +101,7 @@ using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<SCISDbContext>();
     context.Database.EnsureCreated();
-    await SCIS.Infrastructure.Data.SeedData.SeedAsync(context);
+    //await SCIS.Infrastructure.Data.SeedData.SeedAsync(context);
 }
 
 app.Run();

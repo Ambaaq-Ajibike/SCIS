@@ -25,7 +25,7 @@ public class PatientAuthService(SCISDbContext _context, IConfiguration _configur
         var token = await GenerateTokenAsync(patient.Id, patient.HospitalId);
 
         // Log the login
-        await LogAuditAsync("PatientLogin", patient.Us.Id, patient.HospitalId, "Patient", patient.Id, "Patient login successful");
+        //await LogAuditAsync("PatientLogin", patient.Id, patient.HospitalId, "Patient", patient.Id, "Patient login successful");
 
         return new PatientLoginResponse
         {
@@ -111,12 +111,12 @@ public class PatientAuthService(SCISDbContext _context, IConfiguration _configur
         await LogAuditAsync("PatientLogout", null, null, "Token", null, "Patient logged out");
     }
 
-    private async Task LogAuditAsync(string action, Guid? userId, Guid? hospitalId, string entityType, Guid? entityId, string details)
+    private async Task LogAuditAsync(string action, Guid? patientId, Guid? hospitalId, string entityType, Guid? entityId, string details)
     {
         var auditLog = new AuditLog
         {
             Action = action,
-            UserId = userId, // Using patientId as UserId for audit purposes
+            UserId = patientId, // Using patientId as UserId for audit purposes
             HospitalId = hospitalId,
             EntityType = entityType,
             EntityId = entityId,
