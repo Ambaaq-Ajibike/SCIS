@@ -1,17 +1,31 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { usePatientAuth } from '@/lib/patientAuth';
-import { Building2, Eye, EyeOff, Loader2, User } from 'lucide-react';
+import { patientAuthService } from '@/lib/api';
+import { Building2, Eye, EyeOff, Loader2, User, CheckCircle } from 'lucide-react';
 
 export default function PatientLoginPage() {
   const [patientId, setPatientId] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
+  const [isSignupMode, setIsSignupMode] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { login, isLoading } = usePatientAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const patientIdParam = searchParams.get('patientId');
+    if (patientIdParam) {
+      setPatientId(patientIdParam);
+      setIsSignupMode(true);
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,11 +36,44 @@ export default function PatientLoginPage() {
       return;
     }
 
-    const success = await login(patientId, password);
-    if (success) {
-      router.push('/feedback');
+    if (isSignupMode) {
+      if (!confirmPassword) {
+        setError('Please confirm your password');
+        return;
+      }
+      if (password !== confirmPassword) {
+        setError('Passwords do not match');
+        return;
+      }
+      if (password.length < 6) {
+        setError('Password must be at least 6 characters long');
+        return;
+      }
+
+      setIsSubmitting(true);
+      try {
+        const data = await patientAuthService.completeSignup({
+          patientId,
+          password,
+          confirmPassword
+        });
+        
+        localStorage.setItem('patientToken', data.token);
+        localStorage.setItem('patient', JSON.stringify(data.patient));
+        alert('Registration completed successfully! You are now logged in.');
+        router.push('/feedback');
+      } catch (error: any) {
+        setError(error.response?.data?.message || 'Failed to complete registration. Please try again.');
+      } finally {
+        setIsSubmitting(false);
+      }
     } else {
-      setError('Invalid patient credentials. Please try again.');
+      const success = await login(patientId, password);
+      if (success) {
+        router.push('/feedback');
+      } else {
+        setError('Invalid patient credentials. Please try again.');
+      }
     }
   };
 
@@ -41,10 +88,13 @@ export default function PatientLoginPage() {
             </div>
           </div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Patient Login
+            {isSignupMode ? 'Complete Registration' : 'Patient Login'}
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            Sign in to submit your feedback
+            {isSignupMode 
+              ? 'Set your password to complete your patient registration'
+              : 'Sign in to submit your feedback'
+            }
           </p>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
@@ -59,7 +109,8 @@ export default function PatientLoginPage() {
                 type="text"
                 autoComplete="username"
                 required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm"
+                disabled={isSignupMode}
+                className={`appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 ${isSignupMode ? 'rounded-t-md' : 'rounded-t-md'} focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm ${isSignupMode ? 'bg-gray-100' : ''}`}
                 placeholder="Patient ID"
                 value={patientId}
                 onChange={(e) => setPatientId(e.target.value)}
@@ -73,9 +124,9 @@ export default function PatientLoginPage() {
                 id="password"
                 name="password"
                 type={showPassword ? 'text' : 'password'}
-                autoComplete="current-password"
+                autoComplete={isSignupMode ? 'new-password' : 'current-password'}
                 required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 pr-10 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm"
+                className={`appearance-none rounded-none relative block w-full px-3 py-2 pr-10 border border-gray-300 placeholder-gray-500 text-gray-900 ${isSignupMode ? 'rounded-none' : 'rounded-b-md'} focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm`}
                 placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -92,6 +143,35 @@ export default function PatientLoginPage() {
                 )}
               </button>
             </div>
+            {isSignupMode && (
+              <div className="relative">
+                <label htmlFor="confirmPassword" className="sr-only">
+                  Confirm Password
+                </label>
+                <input
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  required
+                  className="appearance-none rounded-none relative block w-full px-3 py-2 pr-10 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm"
+                  placeholder="Confirm Password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                />
+                <button
+                  type="button"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                >
+                  {showConfirmPassword ? (
+                    <EyeOff className="h-5 w-5 text-gray-400" />
+                  ) : (
+                    <Eye className="h-5 w-5 text-gray-400" />
+                  )}
+                </button>
+              </div>
+            )}
           </div>
 
           {error && (
@@ -103,13 +183,13 @@ export default function PatientLoginPage() {
           <div>
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || isSubmitting}
               className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isLoading ? (
+              {(isLoading || isSubmitting) ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                'Sign in as Patient'
+                isSignupMode ? 'Complete Registration' : 'Sign in as Patient'
               )}
             </button>
           </div>

@@ -19,7 +19,7 @@ public class PatientAuthService(SCISDbContext _context, IConfiguration _configur
             .Include(p => p.Hospital)
             .FirstOrDefaultAsync(p => p.PatientId == request.PatientId && p.IsActive);
 
-        if (patient == null || !BCrypt.Net.BCrypt.Verify(request.Password, patient.PasswordHash))
+        if (patient == null || !patient.IsSignupCompleted || string.IsNullOrEmpty(patient.PasswordHash) || !BCrypt.Net.BCrypt.Verify(request.Password, patient.PasswordHash))
             return null;
 
         var token = await GenerateTokenAsync(patient.Id, patient.HospitalId);
@@ -45,8 +45,52 @@ public class PatientAuthService(SCISDbContext _context, IConfiguration _configur
                 HospitalId = patient.HospitalId.ToString(),
                 HospitalName = patient.Hospital?.Name ?? "Unknown Hospital",
                 IsActive = patient.IsActive,
-                BiometricConsent = patient.BiometricConsent,
-                BiometricConsentDate = patient.BiometricConsentDate,
+                IsSignupCompleted = patient.IsSignupCompleted,
+                CreatedAt = patient.CreatedAt
+            }
+        };
+    }
+
+    public async Task<PatientLoginResponse?> CompleteSignupAsync(CompletePatientSignupDto request)
+    {
+        var patient = await _context.Patients
+            .Include(p => p.Hospital)
+            .FirstOrDefaultAsync(p => p.PatientId == request.PatientId && p.IsActive);
+
+        if (patient == null || patient.IsSignupCompleted)
+            return null;
+
+        // Hash the password
+        patient.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
+        patient.IsSignupCompleted = true;
+
+        await _context.SaveChangesAsync();
+
+        // Generate token and return login response
+        var token = await GenerateTokenAsync(patient.Id, patient.HospitalId);
+
+        // Log the signup completion
+        await LogAuditAsync("PatientSignupComplete", patient.Id, patient.HospitalId, "Patient", patient.Id, "Patient signup completed");
+
+        return new PatientLoginResponse
+        {
+            Token = token,
+            RefreshToken = Guid.NewGuid().ToString(),
+            ExpiresAt = DateTime.UtcNow.AddMinutes(60),
+            Patient = new PatientDto
+            {
+                Id = patient.Id.ToString(),
+                FirstName = patient.FirstName,
+                LastName = patient.LastName,
+                PatientId = patient.PatientId,
+                DateOfBirth = patient.DateOfBirth,
+                Gender = patient.Gender,
+                PhoneNumber = patient.PhoneNumber,
+                Email = patient.Email,
+                HospitalId = patient.HospitalId.ToString(),
+                HospitalName = patient.Hospital?.Name ?? "Unknown Hospital",
+                IsActive = patient.IsActive,
+                IsSignupCompleted = patient.IsSignupCompleted,
                 CreatedAt = patient.CreatedAt
             }
         };

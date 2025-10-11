@@ -9,11 +9,10 @@ public class PatientDto
     public DateTime DateOfBirth { get; set; }
     public string Gender { get; set; } = string.Empty;
     public string? PhoneNumber { get; set; }
-    public string? Email { get; set; }
+    public string Email { get; set; } = string.Empty;
     public string HospitalId { get; set; } = string.Empty;
     public string HospitalName { get; set; } = string.Empty;
     public bool IsActive { get; set; }
-    public bool BiometricConsent { get; set; }
-    public DateTime? BiometricConsentDate { get; set; }
+    public bool IsSignupCompleted { get; set; }
     public DateTime CreatedAt { get; set; }
 }

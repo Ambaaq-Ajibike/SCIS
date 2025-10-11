@@ -40,6 +40,25 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
+// CORS Configuration - Fixed to allow specific origins and credentials
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend", policy =>
+    {
+        policy.WithOrigins("http://localhost:3000", "https://localhost:3000")
+              .AllowAnyMethod()
+              .AllowAnyHeader()
+              .AllowCredentials(); // This is important for JWT tokens
+    });
+    
+    // Keep the AllowAll policy for development/testing
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
 // Database
 builder.Services.AddDbContext<SCISDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -69,17 +88,9 @@ builder.Services.AddScoped<IPatientAuthService, PatientAuthService>();
 builder.Services.AddScoped<IDataRequestService, DataRequestService>();
 builder.Services.AddScoped<IFeedbackService, FeedbackService>();
 builder.Services.AddScoped<IMLService, MLService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddHttpClient<EmailService>();
 
-// CORS
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowAll", policy =>
-    {
-        policy.AllowAnyOrigin()
-              .AllowAnyMethod()
-              .AllowAnyHeader();
-    });
-});
 
 var app = builder.Build();
 
@@ -90,8 +101,14 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
-app.UseCors("AllowAll");
+// IMPORTANT: CORS must be before UseHttpsRedirection to prevent preflight redirect issues
+app.UseCors("AllowFrontend");
+
+// Only use HTTPS redirection in production or when explicitly configured
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();

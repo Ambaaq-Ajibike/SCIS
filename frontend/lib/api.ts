@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://localhost:7139/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5066/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -9,9 +9,11 @@ const api = axios.create({
   },
 });
 
-// Request interceptor to add auth token
+// Request interceptor to add auth token and debugging
 api.interceptors.request.use(
   (config) => {
+    console.log('API Request:', config.method?.toUpperCase(), config.url, config.baseURL + config.url);
+    
     // Check for patient token first, then regular token
     const patientToken = localStorage.getItem('patientToken');
     const token = localStorage.getItem('token');
@@ -24,14 +26,20 @@ api.interceptors.request.use(
     return config;
   },
   (error) => {
+    console.error('API Request Error:', error);
     return Promise.reject(error);
   }
 );
 
-// Response interceptor to handle auth errors
+// Response interceptor for debugging and auth error handling
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log('API Response:', response.status, response.config.url);
+    return response;
+  },
   (error) => {
+    console.error('API Response Error:', error.response?.status, error.response?.data, error.config?.url);
+    
     if (error.response?.status === 401) {
       // Check if it's a patient token or regular token
       const patientToken = localStorage.getItem('patientToken');
@@ -137,14 +145,38 @@ export interface Patient {
   dateOfBirth: string;
   gender: string;
   phoneNumber?: string;
-  email?: string;
+  email: string;
   hospitalId: string;
   hospital: Hospital;
   hospitalName: string;
   isActive: boolean;
-  biometricConsent: boolean;
-  biometricConsentDate?: string;
+  isSignupCompleted: boolean;
   createdAt: string;
+}
+
+export interface CreatePatientDto {
+  firstName: string;
+  lastName: string;
+  dateOfBirth: string;
+  gender: string;
+  phoneNumber?: string;
+  email: string;
+}
+
+export interface UpdatePatientDto {
+  firstName: string;
+  lastName: string;
+  dateOfBirth: string;
+  gender: string;
+  phoneNumber?: string;
+  email: string;
+  isActive: boolean;
+}
+
+export interface CompletePatientSignupDto {
+  patientId: string;
+  password: string;
+  confirmPassword: string;
 }
 
 export interface Doctor {
@@ -192,6 +224,11 @@ export const authService = {
 export const patientAuthService = {
   login: async (credentials: PatientLoginRequest): Promise<PatientLoginResponse> => {
     const response = await api.post('/patientauth/login', credentials);
+    return response.data;
+  },
+
+  completeSignup: async (signupData: CompletePatientSignupDto): Promise<PatientLoginResponse> => {
+    const response = await api.post('/patientauth/complete-signup', signupData);
     return response.data;
   },
 
@@ -282,9 +319,29 @@ export const mlService = {
 };
 
 export const patientService = {
+  getPatients: async (search?: string): Promise<Patient[]> => {
+    const params = search ? { search } : {};
+    const response = await api.get('/patient', { params });
+    return response.data;
+  },
+
   getPatientById: async (patientId: string): Promise<Patient> => {
     const response = await api.get(`/patient/${patientId}`);
     return response.data;
+  },
+
+  createPatient: async (patientData: CreatePatientDto): Promise<Patient> => {
+    const response = await api.post('/patient', patientData);
+    return response.data;
+  },
+
+  updatePatient: async (patientId: string, patientData: UpdatePatientDto): Promise<Patient> => {
+    const response = await api.put(`/patient/${patientId}`, patientData);
+    return response.data;
+  },
+
+  deletePatient: async (patientId: string): Promise<void> => {
+    await api.delete(`/patient/${patientId}`);
   },
 };
 

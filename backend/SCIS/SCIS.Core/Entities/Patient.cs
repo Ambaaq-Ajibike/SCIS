@@ -26,21 +26,18 @@ public class Patient
     [MaxLength(20)]
     public string? PhoneNumber { get; set; }
     
-    [MaxLength(100)]
-    public string? Email { get; set; }
-    
     [Required]
-    public string PasswordHash { get; set; } = string.Empty;
+    [MaxLength(100)]
+    public string Email { get; set; } = string.Empty;
+
+    public string? PasswordHash { get; set; } = default;
     
     public Guid HospitalId { get; set; }
     public Hospital Hospital { get; set; } = null!;
     
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public bool IsActive { get; set; } = true;
-    
-    // Biometric consent
-    public bool BiometricConsent { get; set; } = false;
-    public DateTime? BiometricConsentDate { get; set; }
+    public bool IsSignupCompleted { get; set; } = false;
     
     // Navigation properties
     public ICollection<PatientConsent> PatientConsents { get; set; } = [];

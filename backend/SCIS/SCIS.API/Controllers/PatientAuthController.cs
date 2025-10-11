@@ -70,4 +70,21 @@ public class PatientAuthController : ControllerBase
             return StatusCode(500, new { message = "An error occurred during token validation", error = ex.Message });
         }
     }
+
+    [HttpPost("complete-signup")]
+    public async Task<ActionResult<PatientLoginResponse>> CompleteSignup([FromBody] CompletePatientSignupDto request)
+    {
+        try
+        {
+            var response = await _patientAuthService.CompleteSignupAsync(request);
+            if (response == null)
+                return BadRequest(new { message = "Invalid patient ID or signup already completed" });
+
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "An error occurred during signup completion", error = ex.Message });
+        }
+    }
 }
