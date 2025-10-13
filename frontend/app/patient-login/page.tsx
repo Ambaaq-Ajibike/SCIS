@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { usePatientAuth } from '@/lib/patientAuth';
 import { patientAuthService } from '@/lib/api';
 import { Building2, Eye, EyeOff, Loader2, User, CheckCircle } from 'lucide-react';
+import { toast } from 'react-toastify';
 
 export default function PatientLoginPage() {
   const [patientId, setPatientId] = useState('');
@@ -60,7 +61,9 @@ export default function PatientLoginPage() {
         
         localStorage.setItem('patientToken', data.token);
         localStorage.setItem('patient', JSON.stringify(data.patient));
-        alert('Registration completed successfully! You are now logged in.');
+        toast.success('Registration completed successfully! You are now logged in.', {
+          autoClose: 4000,
+        });
         router.push('/feedback');
       } catch (error: any) {
         setError(error.response?.data?.message || 'Failed to complete registration. Please try again.');
