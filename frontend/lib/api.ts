@@ -200,6 +200,80 @@ export interface HospitalDto {
   createdAt: string;
 }
 
+export interface HospitalSettingsDto {
+  id: string;
+  hospitalId: string;
+  hospitalName: string;
+  dataRequestEndpoint?: string;
+  patientEndpoint?: string;
+  observationEndpoint?: string;
+  conditionEndpoint?: string;
+  medicationEndpoint?: string;
+  diagnosticReportEndpoint?: string;
+  procedureEndpoint?: string;
+  encounterEndpoint?: string;
+  allergyIntoleranceEndpoint?: string;
+  immunizationEndpoint?: string;
+  apiKey?: string;
+  authToken?: string;
+  createdAt: string;
+  updatedAt: string;
+  isActive: boolean;
+  isDataRequestEndpointValid: boolean;
+  isPatientEndpointValid: boolean;
+  isObservationEndpointValid: boolean;
+  isConditionEndpointValid: boolean;
+  isMedicationEndpointValid: boolean;
+  isDiagnosticReportEndpointValid: boolean;
+  isProcedureEndpointValid: boolean;
+  isEncounterEndpointValid: boolean;
+  isAllergyIntoleranceEndpointValid: boolean;
+  isImmunizationEndpointValid: boolean;
+  lastValidationDate?: string;
+  lastValidationError?: string;
+}
+
+export interface CreateHospitalSettingsDto {
+  hospitalId: string;
+  dataRequestEndpoint?: string;
+  patientEndpoint?: string;
+  observationEndpoint?: string;
+  conditionEndpoint?: string;
+  medicationEndpoint?: string;
+  diagnosticReportEndpoint?: string;
+  procedureEndpoint?: string;
+  encounterEndpoint?: string;
+  allergyIntoleranceEndpoint?: string;
+  immunizationEndpoint?: string;
+  apiKey?: string;
+  authToken?: string;
+}
+
+export interface UpdateHospitalSettingsDto {
+  dataRequestEndpoint?: string;
+  patientEndpoint?: string;
+  observationEndpoint?: string;
+  conditionEndpoint?: string;
+  medicationEndpoint?: string;
+  diagnosticReportEndpoint?: string;
+  procedureEndpoint?: string;
+  encounterEndpoint?: string;
+  allergyIntoleranceEndpoint?: string;
+  immunizationEndpoint?: string;
+  apiKey?: string;
+  authToken?: string;
+}
+
+export interface EndpointValidationDto {
+  endpointUrl: string;
+  endpointType: string;
+  isValid: boolean;
+  errorMessage?: string;
+  responseSample?: string;
+  responseTimeMs: number;
+  validatedAt: string;
+}
+
 // API Services
 export const authService = {
   login: async (credentials: LoginRequest): Promise<LoginResponse> => {
@@ -353,6 +427,47 @@ export const hospitalService = {
 
   getDoctorsByHospital: async (hospitalId: string): Promise<Doctor[]> => {
     const response = await api.get(`/hospital/${hospitalId}/doctors`);
+    return response.data;
+  },
+};
+
+export const hospitalSettingsService = {
+  getHospitalSettings: async (hospitalId: string): Promise<HospitalSettingsDto> => {
+    const response = await api.get(`/hospitalsettings/${hospitalId}`);
+    return response.data;
+  },
+
+  createHospitalSettings: async (settingsData: CreateHospitalSettingsDto): Promise<HospitalSettingsDto> => {
+    const response = await api.post('/hospitalsettings', settingsData);
+    return response.data;
+  },
+
+  updateHospitalSettings: async (hospitalId: string, settingsData: UpdateHospitalSettingsDto): Promise<HospitalSettingsDto> => {
+    const response = await api.put(`/hospitalsettings/${hospitalId}`, settingsData);
+    return response.data;
+  },
+
+  deleteHospitalSettings: async (hospitalId: string): Promise<void> => {
+    await api.delete(`/hospitalsettings/${hospitalId}`);
+  },
+
+  validateEndpoint: async (endpointUrl: string, endpointType: string): Promise<EndpointValidationDto> => {
+    const response = await api.post('/hospitalsettings/validate-endpoint', {
+      endpointUrl,
+      endpointType
+    });
+    return response.data;
+  },
+
+  validateAllEndpoints: async (hospitalId: string): Promise<HospitalSettingsDto> => {
+    const response = await api.post(`/hospitalsettings/${hospitalId}/validate-all`);
+    return response.data;
+  },
+
+  validateSpecificEndpoints: async (hospitalId: string, endpointTypes: string[]): Promise<EndpointValidationDto[]> => {
+    const response = await api.post(`/hospitalsettings/${hospitalId}/validate-specific`, {
+      endpointTypes
+    });
     return response.data;
   },
 };

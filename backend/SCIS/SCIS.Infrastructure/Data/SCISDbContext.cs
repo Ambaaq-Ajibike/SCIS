@@ -65,6 +65,7 @@ public class SCISDbContext : DbContext
     public DbSet<DataRequest> DataRequests { get; set; }
     public DbSet<PatientFeedback> PatientFeedbacks { get; set; }
     public DbSet<AuditLog> AuditLogs { get; set; }
+    public DbSet<HospitalSettings> HospitalSettings { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -126,6 +127,31 @@ public class SCISDbContext : DbContext
             entity.Property(e => e.PhoneNumber).HasMaxLength(20);
             entity.Property(e => e.Email).HasMaxLength(100);
             entity.Property(e => e.LicenseNumber).HasMaxLength(50);
+        });
+
+        // HospitalSettings configuration
+        modelBuilder.Entity<HospitalSettings>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasDefaultValueSql("gen_random_uuid()");
+            entity.Property(e => e.DataRequestEndpoint).HasMaxLength(500);
+            entity.Property(e => e.PatientEndpoint).HasMaxLength(500);
+            entity.Property(e => e.ObservationEndpoint).HasMaxLength(500);
+            entity.Property(e => e.ConditionEndpoint).HasMaxLength(500);
+            entity.Property(e => e.MedicationEndpoint).HasMaxLength(500);
+            entity.Property(e => e.DiagnosticReportEndpoint).HasMaxLength(500);
+            entity.Property(e => e.ProcedureEndpoint).HasMaxLength(500);
+            entity.Property(e => e.EncounterEndpoint).HasMaxLength(500);
+            entity.Property(e => e.AllergyIntoleranceEndpoint).HasMaxLength(500);
+            entity.Property(e => e.ImmunizationEndpoint).HasMaxLength(500);
+            entity.Property(e => e.ApiKey).HasMaxLength(100);
+            entity.Property(e => e.AuthToken).HasMaxLength(100);
+            entity.Property(e => e.LastValidationError).HasMaxLength(1000);
+            
+            entity.HasOne(e => e.Hospital)
+                .WithOne(h => h.Settings)
+                .HasForeignKey<HospitalSettings>(e => e.HospitalId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         // Patient configuration

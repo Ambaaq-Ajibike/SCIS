@@ -89,7 +89,10 @@ builder.Services.AddScoped<IDataRequestService, DataRequestService>();
 builder.Services.AddScoped<IFeedbackService, FeedbackService>();
 builder.Services.AddScoped<IMLService, MLService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<IHospitalSettingsService, HospitalSettingsService>();
+builder.Services.AddScoped<IFhirValidationService, FhirValidationService>();
 builder.Services.AddHttpClient<EmailService>();
+builder.Services.AddHttpClient<FhirValidationService>();
 
 
 var app = builder.Build();

@@ -37,4 +37,5 @@ public class Hospital
     public ICollection<Patient> Patients { get; set; } = new List<Patient>();
     public ICollection<DataRequest> DataRequests { get; set; } = new List<DataRequest>();
     public ICollection<PatientFeedback> PatientFeedbacks { get; set; } = new List<PatientFeedback>();
+    public HospitalSettings? Settings { get; set; }
 }

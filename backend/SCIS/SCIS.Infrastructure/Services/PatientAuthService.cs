@@ -70,7 +70,7 @@ public class PatientAuthService(SCISDbContext _context, IConfiguration _configur
         var token = await GenerateTokenAsync(patient.Id, patient.HospitalId);
 
         // Log the signup completion
-        await LogAuditAsync("PatientSignupComplete", patient.Id, patient.HospitalId, "Patient", patient.Id, "Patient signup completed");
+        //await LogAuditAsync("PatientSignupComplete", patient.Id, patient.HospitalId, "Patient", patient.Id, "Patient signup completed");
 
         return new PatientLoginResponse
         {
