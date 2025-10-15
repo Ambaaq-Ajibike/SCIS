@@ -122,9 +122,33 @@ export interface DataRequestResponse {
   denialReason?: string;
   requestDate: string;
   responseDate?: string;
+  approvalDate?: string;
   responseTimeMs: number;
   isConsentValid: boolean;
   isRoleAuthorized: boolean;
+  isCrossHospitalRequest: boolean;
+  requestingHospitalName?: string;
+  patientHospitalName?: string;
+  patientName?: string;
+  patientId?: string;
+  approvingUserName?: string;
+}
+
+export interface PendingDataRequest {
+  id: string;
+  patientName: string;
+  patientId: string;
+  requestingHospitalName: string;
+  dataType: string;
+  purpose?: string;
+  requestDate: string;
+  requestingUserName: string;
+}
+
+export interface DataRequestApproval {
+  requestId: string;
+  isApproved: boolean;
+  reason?: string;
 }
 
 export interface Hospital {
@@ -333,6 +357,16 @@ export const feedbackService = {
 export const dataRequestService = {
   requestData: async (request: DataRequestDto): Promise<DataRequestResponse> => {
     const response = await api.post('/datarequest/request', request);
+    return response.data;
+  },
+
+  approveRequest: async (approval: DataRequestApproval): Promise<DataRequestResponse> => {
+    const response = await api.post('/datarequest/approve', approval);
+    return response.data;
+  },
+
+  getPendingRequests: async (): Promise<PendingDataRequest[]> => {
+    const response = await api.get('/datarequest/pending');
     return response.data;
   },
 

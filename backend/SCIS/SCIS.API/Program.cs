@@ -93,6 +93,7 @@ builder.Services.AddScoped<IHospitalSettingsService, HospitalSettingsService>();
 builder.Services.AddScoped<IFhirValidationService, FhirValidationService>();
 builder.Services.AddHttpClient<EmailService>();
 builder.Services.AddHttpClient<FhirValidationService>();
+builder.Services.AddHttpClient<DataRequestService>();
 
 
 var app = builder.Build();

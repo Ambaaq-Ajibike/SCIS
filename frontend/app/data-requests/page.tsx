@@ -14,11 +14,16 @@ import {
   AlertTriangle,
   Loader2,
   Eye,
-  Download
+  Download,
+  X
 } from 'lucide-react';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import Layout from '@/components/Layout';
+import DataRequestManager from '@/components/DataRequestManager';
 import { dataRequestService } from '@/lib/api';
+import { useAuth } from '@/lib/auth';
+import DataRequestForm from '@/components/DataRequestForm';
+import { useRouter } from 'next/navigation';
 
 const requestSchema = z.object({
   patientId: z.string().min(1, 'Patient ID is required'),
@@ -67,6 +72,8 @@ const statusColors = {
 };
 
 export default function DataRequestsPage() {
+  const { user } = useAuth();
+  const router = useRouter();
   const [requests, setRequests] = useState<DataRequest[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(true);
@@ -113,8 +120,14 @@ export default function DataRequestsPage() {
   const onSubmit = async (data: RequestFormData) => {
     setSubmitting(true);
     try {
+      // Find the selected patient to get their patientId
+      const selectedPatient = patients.find(p => p.id === data.patientId);
+      if (!selectedPatient) {
+        throw new Error('Selected patient not found');
+      }
+
       const response = await dataRequestService.requestData({
-        patientId: data.patientId || '',
+        patientId: selectedPatient.patientId, // Use the patient's identifier, not the database ID
         dataType: data.dataType || '',
         purpose: data.purpose
       });
@@ -126,6 +139,28 @@ export default function DataRequestsPage() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleIntraHospitalSuccess = (responseData: string, dataType: string, patientId?: string) => {
+    // Build URL parameters for the patient data page
+    const params = new URLSearchParams({
+      data: encodeURIComponent(responseData),
+      type: dataType,
+    });
+    
+    // If we have patient info, add it to the URL
+    if (patientId) {
+      const selectedPatient = patients.find(p => p.patientId === patientId);
+      if (selectedPatient) {
+        params.append('patientId', encodeURIComponent(selectedPatient.patientId));
+        params.append('patientName', encodeURIComponent(`${selectedPatient.firstName} ${selectedPatient.lastName}`));
+        params.append('hospitalName', encodeURIComponent(selectedPatient.hospitalName));
+      }
+    }
+    
+    // Close modal and redirect
+    setShowNewRequest(false);
+    router.push(`/patient-data?${params.toString()}`);
   };
 
   const filteredRequests = requests.filter(request => {
@@ -222,164 +257,20 @@ export default function DataRequestsPage() {
             </div>
           </div>
 
-          {/* Requests Table */}
-          <div className="bg-white shadow rounded-lg overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Request ID
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Data Type
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Request Date
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Response Time
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredRequests.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
-                        No data requests found
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredRequests.map((request) => (
-                      <tr key={request.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                          {request.id}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[request.status as keyof typeof statusColors]}`}>
-                            {getStatusIcon(request.status)}
-                            <span className="ml-1">{request.status}</span>
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          Medical Records
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {new Date(request.requestDate).toLocaleDateString()}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {request.responseTimeMs}ms
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <div className="flex space-x-2">
-                            <button className="text-primary-600 hover:text-primary-900">
-                              <Eye className="h-4 w-4" />
-                            </button>
-                            {request.status === 'Completed' && (
-                              <button className="text-green-600 hover:text-green-900">
-                                <Download className="h-4 w-4" />
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          {/* Data Request Manager */}
+          <DataRequestManager userRole={user?.role || ''} />
 
           {/* New Request Modal */}
           {showNewRequest && (
             <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-              <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-                <div className="mt-3">
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">New Data Request</h3>
-                  <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                    <div>
-                      <label htmlFor="patientId" className="block text-sm font-medium text-gray-700">
-                        Patient
-                      </label>
-                      <select
-                        {...register('patientId')}
-                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                      >
-                        <option value="">Select a patient</option>
-                        {patients.map((patient) => (
-                          <option key={patient.id} value={patient.id}>
-                            {patient.firstName} {patient.lastName} ({patient.patientId}) - {patient.hospitalName}
-                          </option>
-                        ))}
-                      </select>
-                      {errors.patientId && (
-                        <p className="mt-1 text-sm text-red-600">{errors.patientId.message}</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <label htmlFor="dataType" className="block text-sm font-medium text-gray-700">
-                        Data Type
-                      </label>
-                      <select
-                        {...register('dataType')}
-                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                      >
-                        <option value="">Select data type</option>
-                        {dataTypes.map((type) => (
-                          <option key={type} value={type}>
-                            {type}
-                          </option>
-                        ))}
-                      </select>
-                      {errors.dataType && (
-                        <p className="mt-1 text-sm text-red-600">{errors.dataType.message}</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <label htmlFor="purpose" className="block text-sm font-medium text-gray-700">
-                        Purpose (Optional)
-                      </label>
-                      <textarea
-                        {...register('purpose')}
-                        rows={3}
-                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                        placeholder="Describe the purpose of this data request..."
-                      />
-                    </div>
-
-                    <div className="flex justify-end space-x-3">
-                      <button
-                        type="button"
-                        onClick={() => setShowNewRequest(false)}
-                        className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="submit"
-                        disabled={submitting}
-                        className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50"
-                      >
-                        {submitting ? (
-                          <>
-                            <Loader2 className="h-4 w-4 animate-spin mr-2 inline" />
-                            Submitting...
-                          </>
-                        ) : (
-                          'Submit Request'
-                        )}
-                      </button>
-                    </div>
-                  </form>
-                </div>
+              <div className="relative top-10 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white">
+                 <DataRequestForm 
+                   onRequestSubmitted={() => {
+                     // Refresh data request manager when a new request is submitted
+                     window.location.reload();
+                   }}
+                   onIntraHospitalSuccess={handleIntraHospitalSuccess}
+                 />
               </div>
             </div>
           )}

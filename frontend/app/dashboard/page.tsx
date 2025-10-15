@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import Layout from '@/components/Layout';
+import DataRequestManager from '@/components/DataRequestManager';
 import { feedbackService, mlService, dashboardService } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 
@@ -71,6 +72,7 @@ export default function Dashboard() {
   const [sentimentData, setSentimentData] = useState<SentimentData[]>([]);
   const [doctorsData, setDoctorsData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'overview' | 'data-requests'>('overview');
 
   useEffect(() => {
     fetchDashboardData();
@@ -169,8 +171,37 @@ export default function Dashboard() {
             </p>
           </div>
 
-          {/* Stats Overview */}
-          <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 ${user?.role === 'SystemManager' ? 'xl:grid-cols-6' : 'xl:grid-cols-5'} gap-6 mb-8`}>
+          {/* Navigation Tabs */}
+          <div className="mb-8">
+            <nav className="flex space-x-8" aria-label="Tabs">
+              <button
+                onClick={() => setActiveTab('overview')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'overview'
+                    ? 'border-primary-500 text-primary-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Overview
+              </button>
+              <button
+                onClick={() => setActiveTab('data-requests')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'data-requests'
+                    ? 'border-primary-500 text-primary-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Data Requests
+              </button>
+            </nav>
+          </div>
+
+          {/* Tab Content */}
+          {activeTab === 'overview' && (
+            <>
+              {/* Stats Overview */}
+              <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 ${user?.role === 'SystemManager' ? 'xl:grid-cols-6' : 'xl:grid-cols-5'} gap-6 mb-8`}>
             {user?.role === 'SystemManager' && (
               <div className="bg-white overflow-hidden shadow rounded-lg">
                 <div className="p-5">
@@ -437,6 +468,16 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
+            </>
+          )}
+
+          {/* Data Requests Tab */}
+          {activeTab === 'data-requests' && (
+            <div className="space-y-6">
+              {/* Data Request Manager */}
+              <DataRequestManager userRole={user?.role || ''} />
+            </div>
+          )}
         </div>
       </Layout>
     </ProtectedRoute>

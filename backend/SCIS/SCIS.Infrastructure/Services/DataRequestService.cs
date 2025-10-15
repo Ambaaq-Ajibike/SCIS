@@ -4,16 +4,21 @@ using SCIS.Core.Entities;
 using SCIS.Core.Interfaces;
 using SCIS.Infrastructure.Data;
 using System.Text.Json;
+using System.Net.Http;
 
 namespace SCIS.Infrastructure.Services;
 
 public class DataRequestService : IDataRequestService
 {
     private readonly SCISDbContext _context;
+    private readonly IEmailService _emailService;
+    private readonly HttpClient _httpClient;
 
-    public DataRequestService(SCISDbContext context)
+    public DataRequestService(SCISDbContext context, IEmailService emailService, HttpClient httpClient)
     {
         _context = context;
+        _emailService = emailService;
+        _httpClient = httpClient;
     }
 
     public async Task<DataRequestResponseDto> RequestDataAsync(DataRequestDto request, Guid requestingUserId)
@@ -35,8 +40,25 @@ public class DataRequestService : IDataRequestService
             };
         }
 
-        // Check consent
-        var isConsentValid = await ValidateConsentAsync(request.PatientId, requestingUserId, request.DataType);
+        // Find the patient and their hospital by patient identifier
+        var patient = await _context.Patients
+            .Include(p => p.Hospital)
+            .FirstOrDefaultAsync(p => p.PatientId == request.PatientId);
+
+        if (patient == null)
+        {
+            return new DataRequestResponseDto
+            {
+                Status = "Denied",
+                DenialReason = "Patient not found",
+                RequestDate = startTime,
+                ResponseDate = DateTime.UtcNow,
+                ResponseTimeMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds
+            };
+        }
+
+        // Check if this is a cross-hospital request
+        var isCrossHospitalRequest = patient.HospitalId != requestingUser.HospitalId;
         
         // Check role authorization
         var isRoleAuthorized = await ValidateRoleAsync(requestingUserId, request.DataType);
@@ -45,18 +67,20 @@ public class DataRequestService : IDataRequestService
         {
             RequestingUserId = requestingUserId,
             RequestingHospitalId = requestingUser.HospitalId ?? Guid.Empty,
-            PatientId = request.PatientId,
+            PatientId = patient.Id, // Use the patient's database ID (Guid)
+            PatientHospitalId = patient.HospitalId,
             DataType = request.DataType,
             Purpose = request.Purpose,
-            IsConsentValid = isConsentValid,
+            IsConsentValid = true, // Will be validated during approval
             IsRoleAuthorized = isRoleAuthorized,
+            IsCrossHospitalRequest = isCrossHospitalRequest,
             RequestDate = startTime
         };
 
-        if (!isConsentValid || !isRoleAuthorized)
+        if (!isRoleAuthorized)
         {
             dataRequest.Status = "Denied";
-            dataRequest.DenialReason = !isConsentValid ? "Patient consent not found or expired" : "Insufficient role permissions";
+            dataRequest.DenialReason = "Insufficient role permissions";
             dataRequest.ResponseDate = DateTime.UtcNow;
             dataRequest.ResponseTimeMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
 
@@ -73,61 +97,117 @@ public class DataRequestService : IDataRequestService
                 RequestDate = dataRequest.RequestDate,
                 ResponseDate = dataRequest.ResponseDate,
                 ResponseTimeMs = dataRequest.ResponseTimeMs,
-                IsConsentValid = isConsentValid,
-                IsRoleAuthorized = isRoleAuthorized
+                IsConsentValid = true,
+                IsRoleAuthorized = isRoleAuthorized,
+                IsCrossHospitalRequest = isCrossHospitalRequest,
+                RequestingHospitalName = requestingUser.Hospital?.Name,
+                PatientHospitalName = patient.Hospital?.Name,
+                PatientName = $"{patient.FirstName} {patient.LastName}",
+                PatientId = patient.PatientId
             };
         }
 
-        // Process the request
-        try
+        if (isCrossHospitalRequest)
         {
-            var fhirData = await FormatAsFHIRAsync(request.PatientId, request.DataType);
+            // For cross-hospital requests, create pending request and notify
+            dataRequest.Status = "Pending";
             
-            dataRequest.Status = "Completed";
-            dataRequest.ResponseData = fhirData;
-            dataRequest.ResponseDate = DateTime.UtcNow;
-            dataRequest.ResponseTimeMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
-
             _context.DataRequests.Add(dataRequest);
             await _context.SaveChangesAsync();
 
-            await LogDataRequestAsync(dataRequest.Id, true, dataRequest.ResponseTimeMs);
+            // Send email notification to patient's hospital
+            if (!string.IsNullOrEmpty(patient.Hospital?.Email))
+            {
+                await _emailService.SendDataRequestNotificationAsync(
+                    patient.Hospital.Email,
+                    requestingUser.Hospital?.Name ?? "Unknown Hospital",
+                    $"{patient.FirstName} {patient.LastName}",
+                    patient.PatientId,
+                    request.DataType,
+                    request.Purpose ?? "No purpose specified"
+                );
+            }
+
+            await LogDataRequestAsync(dataRequest.Id, true, 0, "Cross-hospital request created");
 
             return new DataRequestResponseDto
             {
                 Id = dataRequest.Id,
                 Status = dataRequest.Status,
-                ResponseData = dataRequest.ResponseData,
                 RequestDate = dataRequest.RequestDate,
-                ResponseDate = dataRequest.ResponseDate,
-                ResponseTimeMs = dataRequest.ResponseTimeMs,
-                IsConsentValid = isConsentValid,
-                IsRoleAuthorized = isRoleAuthorized
+                ResponseTimeMs = 0,
+                IsConsentValid = true,
+                IsRoleAuthorized = isRoleAuthorized,
+                IsCrossHospitalRequest = isCrossHospitalRequest,
+                RequestingHospitalName = requestingUser.Hospital?.Name,
+                PatientHospitalName = patient.Hospital?.Name,
+                PatientName = $"{patient.FirstName} {patient.LastName}",
+                PatientId = patient.PatientId
             };
         }
-        catch (Exception ex)
+        else
         {
-            dataRequest.Status = "Error";
-            dataRequest.DenialReason = ex.Message;
-            dataRequest.ResponseDate = DateTime.UtcNow;
-            dataRequest.ResponseTimeMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
-
-            _context.DataRequests.Add(dataRequest);
-            await _context.SaveChangesAsync();
-
-            await LogDataRequestAsync(dataRequest.Id, false, dataRequest.ResponseTimeMs, ex.Message);
-
-            return new DataRequestResponseDto
+            // For same-hospital requests, process immediately
+            try
             {
-                Id = dataRequest.Id,
-                Status = dataRequest.Status,
-                DenialReason = dataRequest.DenialReason,
-                RequestDate = dataRequest.RequestDate,
-                ResponseDate = dataRequest.ResponseDate,
-                ResponseTimeMs = dataRequest.ResponseTimeMs,
-                IsConsentValid = isConsentValid,
-                IsRoleAuthorized = isRoleAuthorized
-            };
+                var fhirData = await FormatAsFHIRAsync(patient.Id, request.DataType);
+                
+                dataRequest.Status = "Completed";
+                dataRequest.ResponseData = fhirData;
+                dataRequest.ResponseDate = DateTime.UtcNow;
+                dataRequest.ResponseTimeMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
+
+                _context.DataRequests.Add(dataRequest);
+                await _context.SaveChangesAsync();
+
+                await LogDataRequestAsync(dataRequest.Id, true, dataRequest.ResponseTimeMs);
+
+                return new DataRequestResponseDto
+                {
+                    Id = dataRequest.Id,
+                    Status = dataRequest.Status,
+                    ResponseData = dataRequest.ResponseData,
+                    RequestDate = dataRequest.RequestDate,
+                    ResponseDate = dataRequest.ResponseDate,
+                    ResponseTimeMs = dataRequest.ResponseTimeMs,
+                    IsConsentValid = true,
+                    IsRoleAuthorized = isRoleAuthorized,
+                    IsCrossHospitalRequest = isCrossHospitalRequest,
+                    RequestingHospitalName = requestingUser.Hospital?.Name,
+                    PatientHospitalName = patient.Hospital?.Name,
+                    PatientName = $"{patient.FirstName} {patient.LastName}",
+                    PatientId = patient.PatientId
+                };
+            }
+            catch (Exception ex)
+            {
+                dataRequest.Status = "Error";
+                dataRequest.DenialReason = ex.Message;
+                dataRequest.ResponseDate = DateTime.UtcNow;
+                dataRequest.ResponseTimeMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
+
+                _context.DataRequests.Add(dataRequest);
+                await _context.SaveChangesAsync();
+
+                await LogDataRequestAsync(dataRequest.Id, false, dataRequest.ResponseTimeMs, ex.Message);
+
+                return new DataRequestResponseDto
+                {
+                    Id = dataRequest.Id,
+                    Status = dataRequest.Status,
+                    DenialReason = dataRequest.DenialReason,
+                    RequestDate = dataRequest.RequestDate,
+                    ResponseDate = dataRequest.ResponseDate,
+                    ResponseTimeMs = dataRequest.ResponseTimeMs,
+                    IsConsentValid = true,
+                    IsRoleAuthorized = isRoleAuthorized,
+                    IsCrossHospitalRequest = isCrossHospitalRequest,
+                    RequestingHospitalName = requestingUser.Hospital?.Name,
+                    PatientHospitalName = patient.Hospital?.Name,
+                    PatientName = $"{patient.FirstName} {patient.LastName}",
+                    PatientId = patient.PatientId
+                };
+            }
         }
     }
 
@@ -177,6 +257,247 @@ public class DataRequestService : IDataRequestService
         };
 
         return JsonSerializer.Serialize(fhirData, new JsonSerializerOptions { WriteIndented = true });
+    }
+
+    public async Task<DataRequestResponseDto> ApproveDataRequestAsync(DataRequestApprovalDto approval, Guid approvingUserId)
+    {
+        var startTime = DateTime.UtcNow;
+        var approvingUser = await _context.Users
+            .Include(u => u.Hospital)
+            .FirstOrDefaultAsync(u => u.Id == approvingUserId);
+
+        if (approvingUser == null)
+        {
+            return new DataRequestResponseDto
+            {
+                Status = "Denied",
+                DenialReason = "Invalid approving user",
+                RequestDate = startTime,
+                ResponseDate = DateTime.UtcNow,
+                ResponseTimeMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds
+            };
+        }
+
+        var dataRequest = await _context.DataRequests
+            .Include(dr => dr.RequestingUser)
+            .ThenInclude(u => u.Hospital)
+            .Include(dr => dr.Patient)
+            .ThenInclude(p => p.Hospital)
+            .FirstOrDefaultAsync(dr => dr.Id == approval.RequestId);
+
+        if (dataRequest == null)
+        {
+            return new DataRequestResponseDto
+            {
+                Status = "Denied",
+                DenialReason = "Data request not found",
+                RequestDate = startTime,
+                ResponseDate = DateTime.UtcNow,
+                ResponseTimeMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds
+            };
+        }
+
+        // Check if the approving user belongs to the patient's hospital
+        if (dataRequest.PatientHospitalId != approvingUser.HospitalId)
+        {
+            return new DataRequestResponseDto
+            {
+                Status = "Denied",
+                DenialReason = "Unauthorized to approve this request",
+                RequestDate = dataRequest.RequestDate,
+                ResponseDate = DateTime.UtcNow,
+                ResponseTimeMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds
+            };
+        }
+
+        dataRequest.ApprovingUserId = approvingUserId;
+        dataRequest.ApprovalDate = DateTime.UtcNow;
+
+        if (approval.IsApproved)
+        {
+            try
+            {
+                // Call the patient's hospital endpoint
+                var responseData = await CallPatientEndpointAsync(
+                    dataRequest.Patient.PatientId, 
+                    dataRequest.PatientHospitalId.ToString()!, 
+                    dataRequest.DataType
+                );
+
+                dataRequest.Status = "Completed";
+                dataRequest.ResponseData = responseData;
+                dataRequest.ResponseDate = DateTime.UtcNow;
+                dataRequest.ResponseTimeMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
+
+                // Send approval notification to requesting hospital
+                if (!string.IsNullOrEmpty(dataRequest.RequestingUser.Hospital?.Email))
+                {
+                    await _emailService.SendDataRequestApprovalNotificationAsync(
+                        dataRequest.RequestingUser.Hospital.Email,
+                        dataRequest.Patient.Hospital?.Name ?? "Unknown Hospital",
+                        $"{dataRequest.Patient.FirstName} {dataRequest.Patient.LastName}",
+                        dataRequest.Patient.PatientId,
+                        true
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                dataRequest.Status = "Error";
+                dataRequest.DenialReason = ex.Message;
+                dataRequest.ResponseDate = DateTime.UtcNow;
+                dataRequest.ResponseTimeMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
+            }
+        }
+        else
+        {
+            dataRequest.Status = "Denied";
+            dataRequest.DenialReason = approval.Reason ?? "Request denied";
+            dataRequest.ResponseDate = DateTime.UtcNow;
+            dataRequest.ResponseTimeMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
+
+            // Send denial notification to requesting hospital
+            if (!string.IsNullOrEmpty(dataRequest.RequestingUser.Hospital?.Email))
+            {
+                await _emailService.SendDataRequestApprovalNotificationAsync(
+                    dataRequest.RequestingUser.Hospital.Email,
+                    dataRequest.Patient.Hospital?.Name ?? "Unknown Hospital",
+                    $"{dataRequest.Patient.FirstName} {dataRequest.Patient.LastName}",
+                    dataRequest.Patient.PatientId,
+                    false
+                );
+            }
+        }
+
+        await _context.SaveChangesAsync();
+        await LogDataRequestAsync(dataRequest.Id, dataRequest.Status == "Completed", dataRequest.ResponseTimeMs, dataRequest.DenialReason);
+
+        return new DataRequestResponseDto
+        {
+            Id = dataRequest.Id,
+            Status = dataRequest.Status,
+            ResponseData = dataRequest.ResponseData,
+            DenialReason = dataRequest.DenialReason,
+            RequestDate = dataRequest.RequestDate,
+            ResponseDate = dataRequest.ResponseDate,
+            ApprovalDate = dataRequest.ApprovalDate,
+            ResponseTimeMs = dataRequest.ResponseTimeMs,
+            IsConsentValid = dataRequest.IsConsentValid,
+            IsRoleAuthorized = dataRequest.IsRoleAuthorized,
+            IsCrossHospitalRequest = dataRequest.IsCrossHospitalRequest,
+            RequestingHospitalName = dataRequest.RequestingUser.Hospital?.Name,
+            PatientHospitalName = dataRequest.Patient.Hospital?.Name,
+            PatientName = $"{dataRequest.Patient.FirstName} {dataRequest.Patient.LastName}",
+            PatientId = dataRequest.Patient.PatientId,
+                ApprovingUserName = approvingUser.Username
+        };
+    }
+
+    public async Task<List<PendingDataRequestDto>> GetPendingRequestsAsync(Guid hospitalId)
+    {
+        var pendingRequests = await _context.DataRequests
+            .Include(dr => dr.RequestingUser)
+            .ThenInclude(u => u.Hospital)
+            .Include(dr => dr.Patient)
+            .Where(dr => dr.PatientHospitalId == hospitalId && dr.Status == "Pending")
+            .OrderByDescending(dr => dr.RequestDate)
+            .Select(dr => new PendingDataRequestDto
+            {
+                Id = dr.Id,
+                PatientName = $"{dr.Patient.FirstName} {dr.Patient.LastName}",
+                PatientId = dr.Patient.PatientId,
+                RequestingHospitalName = dr.RequestingUser.Hospital!.Name,
+                DataType = dr.DataType,
+                Purpose = dr.Purpose,
+                RequestDate = dr.RequestDate,
+                RequestingUserName = dr.RequestingUser.Username
+            })
+            .ToListAsync();
+
+        return pendingRequests;
+    }
+
+    public async Task<List<DataRequestResponseDto>> GetRequestHistoryAsync(Guid userId)
+    {
+        var user = await _context.Users
+            .Include(u => u.Hospital)
+            .FirstOrDefaultAsync(u => u.Id == userId);
+
+        if (user == null) return new List<DataRequestResponseDto>();
+
+        var requests = await _context.DataRequests
+            .Include(dr => dr.RequestingUser)
+            .ThenInclude(u => u.Hospital)
+            .Include(dr => dr.Patient)
+            .ThenInclude(p => p.Hospital)
+            .Include(dr => dr.ApprovingUser)
+            .Where(dr => dr.RequestingUserId == userId || dr.ApprovingUserId == userId)
+            .OrderByDescending(dr => dr.RequestDate)
+            .Select(dr => new DataRequestResponseDto
+            {
+                Id = dr.Id,
+                Status = dr.Status,
+                ResponseData = dr.ResponseData,
+                DenialReason = dr.DenialReason,
+                RequestDate = dr.RequestDate,
+                ResponseDate = dr.ResponseDate,
+                ApprovalDate = dr.ApprovalDate,
+                ResponseTimeMs = dr.ResponseTimeMs,
+                IsConsentValid = dr.IsConsentValid,
+                IsRoleAuthorized = dr.IsRoleAuthorized,
+                IsCrossHospitalRequest = dr.IsCrossHospitalRequest,
+                RequestingHospitalName = dr.RequestingUser.Hospital!.Name,
+                PatientHospitalName = dr.Patient.Hospital!.Name,
+                PatientName = $"{dr.Patient.FirstName} {dr.Patient.LastName}",
+                PatientId = dr.Patient.PatientId,
+                ApprovingUserName = dr.ApprovingUser != null ? dr.ApprovingUser.Username : null
+            })
+            .ToListAsync();
+
+        return requests;
+    }
+
+    public async Task<string> CallPatientEndpointAsync(string patientId, string patientHospitalId, string dataType)
+    {
+        var hospitalSettings = await _context.HospitalSettings
+            .FirstOrDefaultAsync(hs => hs.HospitalId.ToString() == patientHospitalId && hs.IsActive);
+
+        if (hospitalSettings == null || string.IsNullOrEmpty(hospitalSettings.PatientEverythingEndpoint))
+        {
+            throw new InvalidOperationException("Hospital endpoint not configured");
+        }
+
+        var patient = await _context.Patients.FirstOrDefaultAsync(p => p.PatientId == patientId);
+        if (patient == null)
+        {
+            throw new ArgumentException("Patient not found");
+        }
+
+        // Replace {patientId} placeholder in the endpoint URL
+        var endpointUrl = hospitalSettings.PatientEverythingEndpoint.Replace("{patientId}", patient.PatientId);
+
+        var request = new HttpRequestMessage(HttpMethod.Get, endpointUrl);
+        
+        // Add authentication headers if configured
+        if (!string.IsNullOrEmpty(hospitalSettings.ApiKey))
+        {
+            request.Headers.Add("X-API-Key", hospitalSettings.ApiKey);
+        }
+        
+        if (!string.IsNullOrEmpty(hospitalSettings.AuthToken))
+        {
+            request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", hospitalSettings.AuthToken);
+        }
+
+        var response = await _httpClient.SendAsync(request);
+        
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new HttpRequestException($"Endpoint call failed with status: {response.StatusCode}");
+        }
+
+        var responseContent = await response.Content.ReadAsStringAsync();
+        return responseContent;
     }
 
     public async Task LogDataRequestAsync(Guid requestId, bool success, int responseTimeMs, string? errorMessage = null)
