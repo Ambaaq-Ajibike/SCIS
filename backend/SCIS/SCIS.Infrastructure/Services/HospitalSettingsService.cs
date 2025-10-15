@@ -4,6 +4,7 @@ using SCIS.Core.DTOs;
 using SCIS.Core.Entities;
 using SCIS.Core.Interfaces;
 using SCIS.Infrastructure.Data;
+using System.Text.Json;
 
 namespace SCIS.Infrastructure.Services;
 
@@ -66,16 +67,8 @@ public class HospitalSettingsService : IHospitalSettingsService
             var settings = new HospitalSettings
             {
                 HospitalId = Guid.Parse(dto.HospitalId),
-                DataRequestEndpoint = dto.DataRequestEndpoint,
-                PatientEndpoint = dto.PatientEndpoint,
-                ObservationEndpoint = dto.ObservationEndpoint,
-                ConditionEndpoint = dto.ConditionEndpoint,
-                MedicationEndpoint = dto.MedicationEndpoint,
-                DiagnosticReportEndpoint = dto.DiagnosticReportEndpoint,
-                ProcedureEndpoint = dto.ProcedureEndpoint,
-                EncounterEndpoint = dto.EncounterEndpoint,
-                AllergyIntoleranceEndpoint = dto.AllergyIntoleranceEndpoint,
-                ImmunizationEndpoint = dto.ImmunizationEndpoint,
+                PatientEverythingEndpoint = dto.PatientEverythingEndpoint,
+                PatientEverythingEndpointParameters = dto.PatientEverythingEndpointParameters,
                 ApiKey = dto.ApiKey,
                 AuthToken = dto.AuthToken,
                 CreatedAt = DateTime.UtcNow,
@@ -110,30 +103,14 @@ public class HospitalSettingsService : IHospitalSettingsService
             }
 
             // Update only provided fields
-            if (dto.DataRequestEndpoint != null)
-                settings.DataRequestEndpoint = dto.DataRequestEndpoint;
-            if (dto.PatientEndpoint != null)
-                settings.PatientEndpoint = dto.PatientEndpoint;
-            if (dto.ObservationEndpoint != null)
-                settings.ObservationEndpoint = dto.ObservationEndpoint;
-            if (dto.ConditionEndpoint != null)
-                settings.ConditionEndpoint = dto.ConditionEndpoint;
-            if (dto.MedicationEndpoint != null)
-                settings.MedicationEndpoint = dto.MedicationEndpoint;
-            if (dto.DiagnosticReportEndpoint != null)
-                settings.DiagnosticReportEndpoint = dto.DiagnosticReportEndpoint;
-            if (dto.ProcedureEndpoint != null)
-                settings.ProcedureEndpoint = dto.ProcedureEndpoint;
-            if (dto.EncounterEndpoint != null)
-                settings.EncounterEndpoint = dto.EncounterEndpoint;
-            if (dto.AllergyIntoleranceEndpoint != null)
-                settings.AllergyIntoleranceEndpoint = dto.AllergyIntoleranceEndpoint;
-            if (dto.ImmunizationEndpoint != null)
-                settings.ImmunizationEndpoint = dto.ImmunizationEndpoint;
+            if (dto.PatientEverythingEndpoint != null)
+                settings.PatientEverythingEndpoint = dto.PatientEverythingEndpoint;
             if (dto.ApiKey != null)
                 settings.ApiKey = dto.ApiKey;
             if (dto.AuthToken != null)
                 settings.AuthToken = dto.AuthToken;
+            if (dto.PatientEverythingEndpointParameters != null)
+                settings.PatientEverythingEndpointParameters = dto.PatientEverythingEndpointParameters;
 
             settings.UpdatedAt = DateTime.UtcNow;
 
@@ -195,36 +172,34 @@ public class HospitalSettingsService : IHospitalSettingsService
 
             var validationTasks = new List<Task<EndpointValidationDto>>();
 
-            // Validate all configured endpoints
-            if (!string.IsNullOrWhiteSpace(settings.DataRequestEndpoint))
-                validationTasks.Add(_fhirValidationService.ValidateEndpointAsync(settings.DataRequestEndpoint, "DataRequest"));
-            
-            if (!string.IsNullOrWhiteSpace(settings.PatientEndpoint))
-                validationTasks.Add(_fhirValidationService.ValidateEndpointAsync(settings.PatientEndpoint, "Patient"));
-            
-            if (!string.IsNullOrWhiteSpace(settings.ObservationEndpoint))
-                validationTasks.Add(_fhirValidationService.ValidateEndpointAsync(settings.ObservationEndpoint, "Observation"));
-            
-            if (!string.IsNullOrWhiteSpace(settings.ConditionEndpoint))
-                validationTasks.Add(_fhirValidationService.ValidateEndpointAsync(settings.ConditionEndpoint, "Condition"));
-            
-            if (!string.IsNullOrWhiteSpace(settings.MedicationEndpoint))
-                validationTasks.Add(_fhirValidationService.ValidateEndpointAsync(settings.MedicationEndpoint, "Medication"));
-            
-            if (!string.IsNullOrWhiteSpace(settings.DiagnosticReportEndpoint))
-                validationTasks.Add(_fhirValidationService.ValidateEndpointAsync(settings.DiagnosticReportEndpoint, "DiagnosticReport"));
-            
-            if (!string.IsNullOrWhiteSpace(settings.ProcedureEndpoint))
-                validationTasks.Add(_fhirValidationService.ValidateEndpointAsync(settings.ProcedureEndpoint, "Procedure"));
-            
-            if (!string.IsNullOrWhiteSpace(settings.EncounterEndpoint))
-                validationTasks.Add(_fhirValidationService.ValidateEndpointAsync(settings.EncounterEndpoint, "Encounter"));
-            
-            if (!string.IsNullOrWhiteSpace(settings.AllergyIntoleranceEndpoint))
-                validationTasks.Add(_fhirValidationService.ValidateEndpointAsync(settings.AllergyIntoleranceEndpoint, "AllergyIntolerance"));
-            
-            if (!string.IsNullOrWhiteSpace(settings.ImmunizationEndpoint))
-                validationTasks.Add(_fhirValidationService.ValidateEndpointAsync(settings.ImmunizationEndpoint, "Immunization"));
+            // Validate the Patient Everything endpoint
+            if (!string.IsNullOrWhiteSpace(settings.PatientEverythingEndpoint))
+            {
+                // Build the URL with parameters for validation
+                var actualUrl = settings.PatientEverythingEndpoint;
+                if (!string.IsNullOrEmpty(settings.PatientEverythingEndpointParameters))
+                {
+                    try
+                    {
+                        var parameters = JsonSerializer.Deserialize<List<EndpointParameterDto>>(settings.PatientEverythingEndpointParameters);
+                        if (parameters != null)
+                        {
+                            foreach (var param in parameters)
+                            {
+                                if (!string.IsNullOrEmpty(param.templatePlaceholder) && !string.IsNullOrEmpty(param.example))
+                                {
+                                    actualUrl = actualUrl.Replace(param.templatePlaceholder, param.example);
+                                }
+                            }
+                        }
+                    }
+                    catch (JsonException ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to parse parameters for endpoint validation");
+                    }
+                }
+                validationTasks.Add(_fhirValidationService.ValidateEndpointAsync(actualUrl, "PatientEverything"));
+            }
 
             var validationResults = await Task.WhenAll(validationTasks);
 
@@ -233,35 +208,8 @@ public class HospitalSettingsService : IHospitalSettingsService
             {
                 switch (result.EndpointType)
                 {
-                    case "DataRequest":
-                        settings.IsDataRequestEndpointValid = result.IsValid;
-                        break;
-                    case "Patient":
-                        settings.IsPatientEndpointValid = result.IsValid;
-                        break;
-                    case "Observation":
-                        settings.IsObservationEndpointValid = result.IsValid;
-                        break;
-                    case "Condition":
-                        settings.IsConditionEndpointValid = result.IsValid;
-                        break;
-                    case "Medication":
-                        settings.IsMedicationEndpointValid = result.IsValid;
-                        break;
-                    case "DiagnosticReport":
-                        settings.IsDiagnosticReportEndpointValid = result.IsValid;
-                        break;
-                    case "Procedure":
-                        settings.IsProcedureEndpointValid = result.IsValid;
-                        break;
-                    case "Encounter":
-                        settings.IsEncounterEndpointValid = result.IsValid;
-                        break;
-                    case "AllergyIntolerance":
-                        settings.IsAllergyIntoleranceEndpointValid = result.IsValid;
-                        break;
-                    case "Immunization":
-                        settings.IsImmunizationEndpointValid = result.IsValid;
+                    case "PatientEverything":
+                        settings.IsPatientEverythingEndpointValid = result.IsValid;
                         break;
                 }
             }
@@ -300,22 +248,36 @@ public class HospitalSettingsService : IHospitalSettingsService
             {
                 string? endpointUrl = endpointType switch
                 {
-                    "DataRequest" => settings.DataRequestEndpoint,
-                    "Patient" => settings.PatientEndpoint,
-                    "Observation" => settings.ObservationEndpoint,
-                    "Condition" => settings.ConditionEndpoint,
-                    "Medication" => settings.MedicationEndpoint,
-                    "DiagnosticReport" => settings.DiagnosticReportEndpoint,
-                    "Procedure" => settings.ProcedureEndpoint,
-                    "Encounter" => settings.EncounterEndpoint,
-                    "AllergyIntolerance" => settings.AllergyIntoleranceEndpoint,
-                    "Immunization" => settings.ImmunizationEndpoint,
+                    "PatientEverything" => settings.PatientEverythingEndpoint,
                     _ => null
                 };
 
                 if (!string.IsNullOrWhiteSpace(endpointUrl))
                 {
-                    validationTasks.Add(_fhirValidationService.ValidateEndpointAsync(endpointUrl, endpointType));
+                    // Build the URL with parameters for validation
+                    var actualUrl = endpointUrl;
+                    if (endpointType == "PatientEverything" && !string.IsNullOrEmpty(settings.PatientEverythingEndpointParameters))
+                    {
+                        try
+                        {
+                            var parameters = JsonSerializer.Deserialize<List<EndpointParameterDto>>(settings.PatientEverythingEndpointParameters);
+                            if (parameters != null)
+                            {
+                                foreach (var param in parameters)
+                                {
+                                    if (!string.IsNullOrEmpty(param.templatePlaceholder) && !string.IsNullOrEmpty(param.example))
+                                    {
+                                        actualUrl = actualUrl.Replace(param.templatePlaceholder, param.example);
+                                    }
+                                }
+                            }
+                        }
+                        catch (JsonException ex)
+                        {
+                            _logger.LogWarning(ex, "Failed to parse parameters for endpoint validation");
+                        }
+                    }
+                    validationTasks.Add(_fhirValidationService.ValidateEndpointAsync(actualUrl, endpointType));
                 }
             }
 
@@ -336,33 +298,16 @@ public class HospitalSettingsService : IHospitalSettingsService
             Id = settings.Id.ToString(),
             HospitalId = settings.HospitalId.ToString(),
             HospitalName = settings.Hospital?.Name ?? string.Empty,
-            DataRequestEndpoint = settings.DataRequestEndpoint,
-            PatientEndpoint = settings.PatientEndpoint,
-            ObservationEndpoint = settings.ObservationEndpoint,
-            ConditionEndpoint = settings.ConditionEndpoint,
-            MedicationEndpoint = settings.MedicationEndpoint,
-            DiagnosticReportEndpoint = settings.DiagnosticReportEndpoint,
-            ProcedureEndpoint = settings.ProcedureEndpoint,
-            EncounterEndpoint = settings.EncounterEndpoint,
-            AllergyIntoleranceEndpoint = settings.AllergyIntoleranceEndpoint,
-            ImmunizationEndpoint = settings.ImmunizationEndpoint,
+            PatientEverythingEndpoint = settings.PatientEverythingEndpoint,
             ApiKey = settings.ApiKey,
             AuthToken = settings.AuthToken,
             CreatedAt = settings.CreatedAt,
             UpdatedAt = settings.UpdatedAt,
             IsActive = settings.IsActive,
-            IsDataRequestEndpointValid = settings.IsDataRequestEndpointValid,
-            IsPatientEndpointValid = settings.IsPatientEndpointValid,
-            IsObservationEndpointValid = settings.IsObservationEndpointValid,
-            IsConditionEndpointValid = settings.IsConditionEndpointValid,
-            IsMedicationEndpointValid = settings.IsMedicationEndpointValid,
-            IsDiagnosticReportEndpointValid = settings.IsDiagnosticReportEndpointValid,
-            IsProcedureEndpointValid = settings.IsProcedureEndpointValid,
-            IsEncounterEndpointValid = settings.IsEncounterEndpointValid,
-            IsAllergyIntoleranceEndpointValid = settings.IsAllergyIntoleranceEndpointValid,
-            IsImmunizationEndpointValid = settings.IsImmunizationEndpointValid,
+            IsPatientEverythingEndpointValid = settings.IsPatientEverythingEndpointValid,
             LastValidationDate = settings.LastValidationDate,
-            LastValidationError = settings.LastValidationError
+            LastValidationError = settings.LastValidationError,
+            PatientEverythingEndpointParameters = settings.PatientEverythingEndpointParameters
         };
     }
 }

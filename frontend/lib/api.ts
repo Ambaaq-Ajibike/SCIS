@@ -204,64 +204,37 @@ export interface HospitalSettingsDto {
   id: string;
   hospitalId: string;
   hospitalName: string;
-  dataRequestEndpoint?: string;
-  patientEndpoint?: string;
-  observationEndpoint?: string;
-  conditionEndpoint?: string;
-  medicationEndpoint?: string;
-  diagnosticReportEndpoint?: string;
-  procedureEndpoint?: string;
-  encounterEndpoint?: string;
-  allergyIntoleranceEndpoint?: string;
-  immunizationEndpoint?: string;
+  patientEverythingEndpoint?: string;
   apiKey?: string;
   authToken?: string;
   createdAt: string;
   updatedAt: string;
   isActive: boolean;
-  isDataRequestEndpointValid: boolean;
-  isPatientEndpointValid: boolean;
-  isObservationEndpointValid: boolean;
-  isConditionEndpointValid: boolean;
-  isMedicationEndpointValid: boolean;
-  isDiagnosticReportEndpointValid: boolean;
-  isProcedureEndpointValid: boolean;
-  isEncounterEndpointValid: boolean;
-  isAllergyIntoleranceEndpointValid: boolean;
-  isImmunizationEndpointValid: boolean;
+  isPatientEverythingEndpointValid: boolean;
   lastValidationDate?: string;
   lastValidationError?: string;
+  
+  // Parameter configuration for the endpoint
+  patientEverythingEndpointParameters?: string;
 }
 
 export interface CreateHospitalSettingsDto {
   hospitalId: string;
-  dataRequestEndpoint?: string;
-  patientEndpoint?: string;
-  observationEndpoint?: string;
-  conditionEndpoint?: string;
-  medicationEndpoint?: string;
-  diagnosticReportEndpoint?: string;
-  procedureEndpoint?: string;
-  encounterEndpoint?: string;
-  allergyIntoleranceEndpoint?: string;
-  immunizationEndpoint?: string;
+  patientEverythingEndpoint?: string;
   apiKey?: string;
   authToken?: string;
+  
+  // Parameter configuration for the endpoint
+  patientEverythingEndpointParameters?: string;
 }
 
 export interface UpdateHospitalSettingsDto {
-  dataRequestEndpoint?: string;
-  patientEndpoint?: string;
-  observationEndpoint?: string;
-  conditionEndpoint?: string;
-  medicationEndpoint?: string;
-  diagnosticReportEndpoint?: string;
-  procedureEndpoint?: string;
-  encounterEndpoint?: string;
-  allergyIntoleranceEndpoint?: string;
-  immunizationEndpoint?: string;
+  patientEverythingEndpoint?: string;
   apiKey?: string;
   authToken?: string;
+  
+  // Parameter configuration for the endpoint
+  patientEverythingEndpointParameters?: string;
 }
 
 export interface EndpointValidationDto {
@@ -272,6 +245,15 @@ export interface EndpointValidationDto {
   responseSample?: string;
   responseTimeMs: number;
   validatedAt: string;
+}
+
+export interface EndpointParameterDto {
+  name: string;
+  type: string; // Only "string" for path parameters
+  required: boolean; // Always true for path parameters
+  description?: string;
+  example?: string;
+  templatePlaceholder: string; // For path parameters: "{patientId}", "{id}", etc.
 }
 
 // API Services
@@ -451,13 +433,13 @@ export const hospitalSettingsService = {
     await api.delete(`/hospitalsettings/${hospitalId}`);
   },
 
-  validateEndpoint: async (endpointUrl: string, endpointType: string): Promise<EndpointValidationDto> => {
-    const response = await api.post('/hospitalsettings/validate-endpoint', {
-      endpointUrl,
-      endpointType
-    });
-    return response.data;
-  },
+          validateEndpoint: async (endpointUrl: string, endpointType: string): Promise<EndpointValidationDto> => {
+            const response = await api.post('/hospitalsettings/validate-endpoint', {
+              endpointUrl,
+              endpointType
+            });
+            return response.data;
+          },
 
   validateAllEndpoints: async (hospitalId: string): Promise<HospitalSettingsDto> => {
     const response = await api.post(`/hospitalsettings/${hospitalId}/validate-all`);
@@ -470,6 +452,15 @@ export const hospitalSettingsService = {
     });
     return response.data;
   },
+
+  buildUrl: async (baseUrl: string, parametersJson: string, values: Record<string, any>): Promise<any> => {
+    const response = await api.post('/hospitalsettings/build-url', {
+      baseUrl,
+      parametersJson,
+      values
+    });
+    return response.data;
+  }
 };
 
 export const dashboardService = {

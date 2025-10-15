@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using SCIS.Core.DTOs;
+using SCIS.Core.Interfaces;
 
 namespace SCIS.Infrastructure.Services;
 
@@ -53,7 +54,7 @@ public class FhirValidationService : IFhirValidationService
                 return validationResult;
             }
 
-            _logger.LogInformation("Validating FHIR endpoint: {EndpointUrl} for type: {EndpointType}", endpointUrl, endpointType);
+            _logger.LogInformation("Validating FHIR Patient Everything endpoint: {EndpointUrl}", endpointUrl);
 
             // Make a test request to the endpoint
             var response = await _httpClient.GetAsync(endpointUrl);
@@ -73,18 +74,18 @@ public class FhirValidationService : IFhirValidationService
                 return validationResult;
             }
 
-            // Validate FHIR JSON structure
-            var isValidFhir = await IsValidFhirResponseAsync(responseContent, endpointType);
+            // Validate FHIR Bundle structure for Patient Everything endpoint
+            var isValidBundle = ValidateFhirBundle(responseContent, out var errorMessage);
             
-            if (isValidFhir)
+            if (isValidBundle)
             {
                 validationResult.IsValid = true;
                 validationResult.ResponseSample = TruncateResponseSample(responseContent);
-                _logger.LogInformation("Successfully validated FHIR endpoint: {EndpointUrl}", endpointUrl);
+                _logger.LogInformation("Successfully validated FHIR Patient Everything endpoint: {EndpointUrl}", endpointUrl);
             }
             else
             {
-                validationResult.ErrorMessage = "Response does not conform to FHIR JSON format";
+                validationResult.ErrorMessage = errorMessage;
                 validationResult.ResponseSample = TruncateResponseSample(responseContent);
             }
         }
@@ -179,6 +180,165 @@ public class FhirValidationService : IFhirValidationService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error parsing FHIR JSON response");
+            return false;
+        }
+    }
+
+    private static bool ValidateFhirBundle(string jsonResponse, out string errorMessage)
+    {
+        errorMessage = string.Empty;
+        
+        try
+        {
+            using var document = JsonDocument.Parse(jsonResponse);
+            var root = document.RootElement;
+
+            // Check for basic FHIR Bundle structure
+            if (!root.TryGetProperty("resourceType", out var resourceTypeElement))
+            {
+                errorMessage = "Missing 'resourceType' field - not a valid FHIR resource";
+                return false;
+            }
+
+            var resourceType = resourceTypeElement.GetString();
+            if (resourceType != "Bundle")
+            {
+                errorMessage = $"Expected 'Bundle' resourceType, but got '{resourceType}'";
+                return false;
+            }
+
+            // Check for required Bundle fields
+            if (!root.TryGetProperty("type", out var typeElement))
+            {
+                errorMessage = "Missing 'type' field in Bundle";
+                return false;
+            }
+
+            var bundleType = typeElement.GetString();
+            if (bundleType != "searchset")
+            {
+                errorMessage = $"Expected 'searchset' bundle type, but got '{bundleType}'";
+                return false;
+            }
+
+            // Check for entry array
+            if (!root.TryGetProperty("entry", out var entryElement) || entryElement.ValueKind != JsonValueKind.Array)
+            {
+                errorMessage = "Missing or invalid 'entry' array in Bundle";
+                return false;
+            }
+
+            var entries = entryElement.EnumerateArray().ToList();
+            if (entries.Count == 0)
+            {
+                errorMessage = "Bundle contains no entries";
+                return false;
+            }
+
+            // Collect all resource types and check for patient references
+            var resourceTypes = new HashSet<string>();
+            var patientReferences = new HashSet<string>();
+            bool hasPatientResource = false;
+
+            foreach (var entry in entries)
+            {
+                if (entry.TryGetProperty("resource", out var resourceElement))
+                {
+                    if (resourceElement.TryGetProperty("resourceType", out var entryResourceType))
+                    {
+                        var entryType = entryResourceType.GetString();
+                        resourceTypes.Add(entryType ?? "");
+                        
+                        if (entryType == "Patient")
+                        {
+                            hasPatientResource = true;
+                        }
+                        
+                        // Check for patient references in resources
+                        if (resourceElement.TryGetProperty("subject", out var subjectElement))
+                        {
+                            if (subjectElement.TryGetProperty("reference", out var referenceElement))
+                            {
+                                var reference = referenceElement.GetString();
+                                if (!string.IsNullOrEmpty(reference) && reference.StartsWith("Patient/"))
+                                {
+                                    patientReferences.Add(reference);
+                                }
+                            }
+                        }
+                        
+                        // Also check for patient field (used in Device resources)
+                        if (resourceElement.TryGetProperty("patient", out var patientElement))
+                        {
+                            if (patientElement.TryGetProperty("reference", out var patientRefElement))
+                            {
+                                var patientRef = patientRefElement.GetString();
+                                if (!string.IsNullOrEmpty(patientRef) && patientRef.StartsWith("Patient/"))
+                                {
+                                    patientReferences.Add(patientRef);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // For Patient Everything endpoint, we should have either:
+            // 1. A Patient resource directly, OR
+            // 2. Resources that reference patients (which is what we see in this response)
+            if (!hasPatientResource && patientReferences.Count == 0)
+            {
+                errorMessage = "Bundle should contain either Patient resources or resources that reference patients";
+                return false;
+            }
+
+            // Check for common FHIR resource types that should be present in Patient Everything
+            var expectedResourceTypes = new[] { "Patient", "Observation", "Condition", "Encounter", "Device" };
+            var hasExpectedTypes = expectedResourceTypes.Any(type => resourceTypes.Contains(type));
+
+            if (!hasExpectedTypes)
+            {
+                errorMessage = $"Bundle should contain common FHIR resources. Found: {string.Join(", ", resourceTypes)}";
+                return false;
+            }
+
+            // If we have a Patient resource, validate its required fields
+            if (hasPatientResource)
+            {
+                var patientEntry = entries.FirstOrDefault(e => 
+                    e.TryGetProperty("resource", out var res) && 
+                    res.TryGetProperty("resourceType", out var rt) && 
+                    rt.GetString() == "Patient");
+
+                if (patientEntry.ValueKind != JsonValueKind.Undefined)
+                {
+                    var patientResource = patientEntry.GetProperty("resource");
+                    
+                    // Check for required Patient fields
+                    if (!patientResource.TryGetProperty("id", out _))
+                    {
+                        errorMessage = "Patient resource missing required 'id' field";
+                        return false;
+                    }
+
+                    if (!patientResource.TryGetProperty("name", out _))
+                    {
+                        errorMessage = "Patient resource missing required 'name' field";
+                        return false;
+                    }
+                }
+            }
+
+            return true;
+        }
+        catch (JsonException ex)
+        {
+            errorMessage = $"Invalid JSON format: {ex.Message}";
+            return false;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Validation error: {ex.Message}";
             return false;
         }
     }

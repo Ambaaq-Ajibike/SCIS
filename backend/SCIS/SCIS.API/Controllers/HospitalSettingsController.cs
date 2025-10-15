@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using SCIS.Core.DTOs;
 using SCIS.Core.Interfaces;
 using System.Security.Claims;
+using System.Text.Json;
 
 namespace SCIS.API.Controllers;
 
@@ -180,15 +181,18 @@ public class HospitalSettingsController : ControllerBase
             return StatusCode(500, new { message = "An error occurred while validating endpoints", error = ex.Message });
         }
     }
+
+
 }
 
-public class ValidateEndpointRequest
-{
-    public string EndpointUrl { get; set; } = string.Empty;
-    public string EndpointType { get; set; } = string.Empty;
-}
+        public class ValidateEndpointRequest
+        {
+            public string EndpointUrl { get; set; } = string.Empty;
+            public string EndpointType { get; set; } = string.Empty;
+        }
 
 public class ValidateSpecificEndpointsRequest
 {
     public List<string> EndpointTypes { get; set; } = new();
 }
+

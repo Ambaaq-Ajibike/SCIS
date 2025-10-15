@@ -8,16 +8,7 @@ public class HospitalSettingsDto
     public string HospitalId { get; set; } = string.Empty;
     public string HospitalName { get; set; } = string.Empty;
     
-    public string? DataRequestEndpoint { get; set; }
-    public string? PatientEndpoint { get; set; }
-    public string? ObservationEndpoint { get; set; }
-    public string? ConditionEndpoint { get; set; }
-    public string? MedicationEndpoint { get; set; }
-    public string? DiagnosticReportEndpoint { get; set; }
-    public string? ProcedureEndpoint { get; set; }
-    public string? EncounterEndpoint { get; set; }
-    public string? AllergyIntoleranceEndpoint { get; set; }
-    public string? ImmunizationEndpoint { get; set; }
+    public string? PatientEverythingEndpoint { get; set; }
     
     public string? ApiKey { get; set; }
     public string? AuthToken { get; set; }
@@ -27,19 +18,13 @@ public class HospitalSettingsDto
     public bool IsActive { get; set; }
     
     // Validation status
-    public bool IsDataRequestEndpointValid { get; set; }
-    public bool IsPatientEndpointValid { get; set; }
-    public bool IsObservationEndpointValid { get; set; }
-    public bool IsConditionEndpointValid { get; set; }
-    public bool IsMedicationEndpointValid { get; set; }
-    public bool IsDiagnosticReportEndpointValid { get; set; }
-    public bool IsProcedureEndpointValid { get; set; }
-    public bool IsEncounterEndpointValid { get; set; }
-    public bool IsAllergyIntoleranceEndpointValid { get; set; }
-    public bool IsImmunizationEndpointValid { get; set; }
+    public bool IsPatientEverythingEndpointValid { get; set; }
     
     public DateTime? LastValidationDate { get; set; }
     public string? LastValidationError { get; set; }
+    
+    // Parameter configuration for the endpoint
+    public string? PatientEverythingEndpointParameters { get; set; }
 }
 
 public class CreateHospitalSettingsDto
@@ -48,73 +33,25 @@ public class CreateHospitalSettingsDto
     public string HospitalId { get; set; } = string.Empty;
     
     [Url]
-    public string? DataRequestEndpoint { get; set; }
-    
-    [Url]
-    public string? PatientEndpoint { get; set; }
-    
-    [Url]
-    public string? ObservationEndpoint { get; set; }
-    
-    [Url]
-    public string? ConditionEndpoint { get; set; }
-    
-    [Url]
-    public string? MedicationEndpoint { get; set; }
-    
-    [Url]
-    public string? DiagnosticReportEndpoint { get; set; }
-    
-    [Url]
-    public string? ProcedureEndpoint { get; set; }
-    
-    [Url]
-    public string? EncounterEndpoint { get; set; }
-    
-    [Url]
-    public string? AllergyIntoleranceEndpoint { get; set; }
-    
-    [Url]
-    public string? ImmunizationEndpoint { get; set; }
+    public string? PatientEverythingEndpoint { get; set; }
     
     public string? ApiKey { get; set; }
     public string? AuthToken { get; set; }
+    
+    // Parameter configuration for the endpoint
+    public string? PatientEverythingEndpointParameters { get; set; }
 }
 
 public class UpdateHospitalSettingsDto
 {
     [Url]
-    public string? DataRequestEndpoint { get; set; }
-    
-    [Url]
-    public string? PatientEndpoint { get; set; }
-    
-    [Url]
-    public string? ObservationEndpoint { get; set; }
-    
-    [Url]
-    public string? ConditionEndpoint { get; set; }
-    
-    [Url]
-    public string? MedicationEndpoint { get; set; }
-    
-    [Url]
-    public string? DiagnosticReportEndpoint { get; set; }
-    
-    [Url]
-    public string? ProcedureEndpoint { get; set; }
-    
-    [Url]
-    public string? EncounterEndpoint { get; set; }
-    
-    [Url]
-    public string? AllergyIntoleranceEndpoint { get; set; }
-    
-    [Url]
-    public string? ImmunizationEndpoint { get; set; }
+    public string? PatientEverythingEndpoint { get; set; }
     
     public string? ApiKey { get; set; }
     public string? AuthToken { get; set; }
+    
+    // Parameter configuration for the endpoint
+    public string? PatientEverythingEndpointParameters { get; set; }
 }
 
 public class EndpointValidationDto
@@ -126,4 +63,14 @@ public class EndpointValidationDto
     public string? ResponseSample { get; set; }
     public int ResponseTimeMs { get; set; }
     public DateTime ValidatedAt { get; set; } = DateTime.UtcNow;
+}
+
+public class EndpointParameterDto
+{
+    public string name { get; set; } = string.Empty;
+    public string type { get; set; } = "string"; // Only string type for path parameters
+    public bool required { get; set; } = true; // Path parameters are always required
+    public string? description { get; set; }
+    public string? example { get; set; }
+    public string templatePlaceholder { get; set; } = string.Empty; // For path parameters: "{patientId}", "{id}", etc.
 }

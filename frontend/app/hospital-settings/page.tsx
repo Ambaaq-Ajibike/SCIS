@@ -1,9 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { hospitalSettingsService, hospitalService, HospitalSettingsDto, CreateHospitalSettingsDto, UpdateHospitalSettingsDto, EndpointValidationDto, HospitalDto } from '@/lib/api';
+import { hospitalSettingsService, hospitalService, HospitalSettingsDto, CreateHospitalSettingsDto, UpdateHospitalSettingsDto, EndpointValidationDto, HospitalDto, EndpointParameterDto } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import Layout from '../../components/Layout';
+import EndpointParameterConfig from '../../components/EndpointParameterConfig';
+import { toast } from 'react-toastify';
 
 interface EndpointField {
   key: keyof UpdateHospitalSettingsDto;
@@ -11,78 +13,17 @@ interface EndpointField {
   placeholder: string;
   description: string;
   validationKey: keyof HospitalSettingsDto;
+  parameterKey: keyof UpdateHospitalSettingsDto;
 }
 
 const ENDPOINT_FIELDS: EndpointField[] = [
   {
-    key: 'dataRequestEndpoint',
-    label: 'Data Request Endpoint',
-    placeholder: 'https://hapi.fhir.org/baseR4/Patient',
-    description: 'Endpoint for general data requests',
-    validationKey: 'isDataRequestEndpointValid'
-  },
-  {
-    key: 'patientEndpoint',
-    label: 'Patient Endpoint',
-    placeholder: 'https://hapi.fhir.org/baseR4/Patient',
-    description: 'FHIR Patient resource endpoint',
-    validationKey: 'isPatientEndpointValid'
-  },
-  {
-    key: 'observationEndpoint',
-    label: 'Observation Endpoint',
-    placeholder: 'https://hapi.fhir.org/baseR4/Observation',
-    description: 'FHIR Observation resource endpoint',
-    validationKey: 'isObservationEndpointValid'
-  },
-  {
-    key: 'conditionEndpoint',
-    label: 'Condition Endpoint',
-    placeholder: 'https://hapi.fhir.org/baseR4/Condition',
-    description: 'FHIR Condition resource endpoint',
-    validationKey: 'isConditionEndpointValid'
-  },
-  {
-    key: 'medicationEndpoint',
-    label: 'Medication Endpoint',
-    placeholder: 'https://hapi.fhir.org/baseR4/Medication',
-    description: 'FHIR Medication resource endpoint',
-    validationKey: 'isMedicationEndpointValid'
-  },
-  {
-    key: 'diagnosticReportEndpoint',
-    label: 'Diagnostic Report Endpoint',
-    placeholder: 'https://hapi.fhir.org/baseR4/DiagnosticReport',
-    description: 'FHIR DiagnosticReport resource endpoint',
-    validationKey: 'isDiagnosticReportEndpointValid'
-  },
-  {
-    key: 'procedureEndpoint',
-    label: 'Procedure Endpoint',
-    placeholder: 'https://hapi.fhir.org/baseR4/Procedure',
-    description: 'FHIR Procedure resource endpoint',
-    validationKey: 'isProcedureEndpointValid'
-  },
-  {
-    key: 'encounterEndpoint',
-    label: 'Encounter Endpoint',
-    placeholder: 'https://hapi.fhir.org/baseR4/Encounter',
-    description: 'FHIR Encounter resource endpoint',
-    validationKey: 'isEncounterEndpointValid'
-  },
-  {
-    key: 'allergyIntoleranceEndpoint',
-    label: 'Allergy Intolerance Endpoint',
-    placeholder: 'https://hapi.fhir.org/baseR4/AllergyIntolerance',
-    description: 'FHIR AllergyIntolerance resource endpoint',
-    validationKey: 'isAllergyIntoleranceEndpointValid'
-  },
-  {
-    key: 'immunizationEndpoint',
-    label: 'Immunization Endpoint',
-    placeholder: 'https://hapi.fhir.org/baseR4/Immunization',
-    description: 'FHIR Immunization resource endpoint',
-    validationKey: 'isImmunizationEndpointValid'
+    key: 'patientEverythingEndpoint',
+    label: 'Patient Everything Endpoint',
+    placeholder: 'https://hapi.fhir.org/baseR4/Patient/{patientId}/$everything',
+    description: 'FHIR Patient $everything endpoint that returns a Bundle containing all patient data (Patient, Observations, Conditions, etc.)',
+    validationKey: 'isPatientEverythingEndpointValid',
+    parameterKey: 'patientEverythingEndpointParameters'
   }
 ];
 
@@ -94,7 +35,6 @@ export default function HospitalSettingsPage() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [validating, setValidating] = useState<string | null>(null);
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [validationResults, setValidationResults] = useState<EndpointValidationDto[]>([]);
   const [showFullResponse, setShowFullResponse] = useState<string | null>(null);
 
@@ -188,34 +128,79 @@ export default function HospitalSettingsPage() {
       }
 
       setSettings(updatedSettings);
-      setMessage({ type: 'success', text: 'Settings saved successfully' });
+      toast.success('Hospital settings saved successfully! ✅', {
+        position: "top-right",
+        autoClose: 4000,
+      });
     } catch (error) {
       console.error('Error saving settings:', error);
-      setMessage({ type: 'error', text: 'Failed to save settings' });
+      toast.error('Failed to save settings. Please try again.', {
+        position: "top-right",
+        autoClose: 4000,
+      });
     } finally {
       setSaving(false);
     }
   };
 
-  const handleValidateEndpoint = async (endpointUrl: string, endpointType: string) => {
-    if (!endpointUrl.trim()) return;
+          const handleValidateEndpoint = async (endpointUrl: string, endpointType: string) => {
+            if (!endpointUrl.trim()) return;
 
-    setValidating(endpointType);
-    try {
-      const result = await hospitalSettingsService.validateEndpoint(endpointUrl, endpointType);
+            setValidating(endpointType);
+            try {
+              // Build the URL with parameters using the same logic as the preview
+              let actualUrl = endpointUrl;
+              const parameters = parseParameters(formData.patientEverythingEndpointParameters);
+              
+              // Replace template placeholders with example values
+              parameters.forEach(param => {
+                if (param.templatePlaceholder && param.example) {
+                  actualUrl = actualUrl.replace(param.templatePlaceholder, param.example);
+                }
+              });
+              
+              const result = await hospitalSettingsService.validateEndpoint(actualUrl, endpointType);
       setValidationResults(prev => {
         const filtered = prev.filter(r => r.endpointType !== endpointType);
         return [...filtered, result];
       });
       
+      // Update the settings object with the new validation status
+      if (settings) {
+        const updatedSettings = { ...settings };
+        
+        // Map endpoint types to validation keys
+        const validationKeyMap: Record<string, keyof HospitalSettingsDto> = {
+          'PatientEverything': 'isPatientEverythingEndpointValid'
+        };
+        
+        const validationKey = validationKeyMap[endpointType];
+        if (validationKey) {
+          (updatedSettings as any)[validationKey] = result.isValid;
+        }
+        
+        updatedSettings.lastValidationDate = new Date().toISOString();
+        updatedSettings.lastValidationError = result.isValid ? null : result.errorMessage || 'Validation failed';
+        setSettings(updatedSettings);
+      }
+      
       if (result.isValid) {
-        setMessage({ type: 'success', text: `${endpointType} endpoint validated successfully` });
+        toast.success(`${endpointType} endpoint validated successfully! ✅`, {
+          position: "top-right",
+          autoClose: 4000,
+        });
       } else {
-        setMessage({ type: 'error', text: `${endpointType} endpoint validation failed: ${result.errorMessage}` });
+        toast.error(`${endpointType} endpoint validation failed: ${result.errorMessage}`, {
+          position: "top-right",
+          autoClose: 6000,
+        });
       }
     } catch (error) {
       console.error('Error validating endpoint:', error);
-      setMessage({ type: 'error', text: 'Failed to validate endpoint' });
+      toast.error('Failed to validate endpoint. Please try again.', {
+        position: "top-right",
+        autoClose: 4000,
+      });
     } finally {
       setValidating(null);
     }
@@ -228,10 +213,20 @@ export default function HospitalSettingsPage() {
     try {
       const updatedSettings = await hospitalSettingsService.validateAllEndpoints(selectedHospitalId);
       setSettings(updatedSettings);
-      setMessage({ type: 'success', text: 'All endpoints validated successfully' });
+      
+      // Count successful validations
+      const validCount = updatedSettings.isPatientEverythingEndpointValid ? 1 : 0;
+      
+      toast.success(`All endpoints validated! ${validCount} endpoints are working correctly. ✅`, {
+        position: "top-right",
+        autoClose: 5000,
+      });
     } catch (error) {
       console.error('Error validating all endpoints:', error);
-      setMessage({ type: 'error', text: 'Failed to validate endpoints' });
+      toast.error('Failed to validate endpoints. Please try again.', {
+        position: "top-right",
+        autoClose: 4000,
+      });
     } finally {
       setValidating(null);
     }
@@ -247,6 +242,27 @@ export default function HospitalSettingsPage() {
     return validationResults.find(r => r.endpointType === endpointType);
   };
 
+  const parseParameters = (parameterString: string | undefined): EndpointParameterDto[] => {
+    if (!parameterString) return [];
+    try {
+      return JSON.parse(parameterString);
+    } catch {
+      return [];
+    }
+  };
+
+  const stringifyParameters = (parameters: EndpointParameterDto[]): string => {
+    return JSON.stringify(parameters);
+  };
+
+  const handleParametersChange = (field: EndpointField, parameters: EndpointParameterDto[]) => {
+    const parameterString = stringifyParameters(parameters);
+    setFormData(prev => ({
+      ...prev,
+      [field.parameterKey]: parameterString
+    }));
+  };
+
   const selectedHospital = hospitals.find(h => h.id === selectedHospitalId);
 
   return (
@@ -257,7 +273,7 @@ export default function HospitalSettingsPage() {
             <div className="px-6 py-4 border-b border-gray-200">
               <h1 className="text-2xl font-bold text-gray-900">Hospital Settings</h1>
               <p className="mt-1 text-sm text-gray-600">
-                Configure FHIR/HL7 endpoints for hospital data integration
+                Configure the Patient Everything endpoint that returns a comprehensive FHIR Bundle containing all patient data
               </p>
             </div>
 
@@ -294,16 +310,6 @@ export default function HospitalSettingsPage() {
                 </div>
               )}
 
-              {/* Message Display */}
-              {message && (
-                <div className={`mb-6 p-4 rounded-md ${
-                  message.type === 'success' 
-                    ? 'bg-green-50 border border-green-200 text-green-800' 
-                    : 'bg-red-50 border border-red-200 text-red-800'
-                }`}>
-                  {message.text}
-                </div>
-              )}
 
               {loading ? (
                 <div className="flex justify-center items-center py-8">
@@ -345,10 +351,10 @@ export default function HospitalSettingsPage() {
                     </div>
                   </div>
 
-                  {/* FHIR Endpoints */}
+                  {/* Patient Everything Endpoint */}
                   <div>
                     <div className="flex justify-between items-center mb-4">
-                      <h3 className="text-lg font-medium text-gray-900">FHIR Endpoints</h3>
+                      <h3 className="text-lg font-medium text-gray-900">Patient Everything Endpoint</h3>
                       <button
                         onClick={handleValidateAll}
                         disabled={validating === 'all'}
@@ -432,6 +438,14 @@ export default function HospitalSettingsPage() {
                                 )}
                               </div>
                             )}
+
+                            {/* Parameter Configuration */}
+                            <EndpointParameterConfig
+                              endpointType={field.label.replace(' Endpoint', '')}
+                              endpointUrl={formData[field.key] || ''}
+                              parameters={parseParameters(formData[field.parameterKey])}
+                              onParametersChange={(parameters) => handleParametersChange(field, parameters)}
+                            />
                           </div>
                         );
                       })}

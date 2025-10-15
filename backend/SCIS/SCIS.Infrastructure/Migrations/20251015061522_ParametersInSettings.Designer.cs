@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using SCIS.Infrastructure.Data;
@@ -11,9 +12,11 @@ using SCIS.Infrastructure.Data;
 namespace SCIS.Infrastructure.Migrations
 {
     [DbContext(typeof(SCISDbContext))]
-    partial class SCISDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251015061522_ParametersInSettings")]
+    partial class ParametersInSettings
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -215,6 +218,14 @@ namespace SCIS.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasDefaultValueSql("gen_random_uuid()");
 
+                    b.Property<string>("AllergyIntoleranceEndpoint")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("AllergyIntoleranceEndpointParameters")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
                     b.Property<string>("ApiKey")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
@@ -223,16 +234,83 @@ namespace SCIS.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<string>("ConditionEndpoint")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("ConditionEndpointParameters")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DataRequestEndpoint")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("DataRequestEndpointParameters")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("DiagnosticReportEndpoint")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("DiagnosticReportEndpointParameters")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("EncounterEndpoint")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("EncounterEndpointParameters")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
 
                     b.Property<Guid>("HospitalId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("ImmunizationEndpoint")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("ImmunizationEndpointParameters")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
-                    b.Property<bool>("IsPatientEverythingEndpointValid")
+                    b.Property<bool>("IsAllergyIntoleranceEndpointValid")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsConditionEndpointValid")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDataRequestEndpointValid")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDiagnosticReportEndpointValid")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsEncounterEndpointValid")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsImmunizationEndpointValid")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsMedicationEndpointValid")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsObservationEndpointValid")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsPatientEndpointValid")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsProcedureEndpointValid")
                         .HasColumnType("boolean");
 
                     b.Property<DateTime?>("LastValidationDate")
@@ -242,11 +320,35 @@ namespace SCIS.Infrastructure.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
 
-                    b.Property<string>("PatientEverythingEndpoint")
+                    b.Property<string>("MedicationEndpoint")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
-                    b.Property<string>("PatientEverythingEndpointParameters")
+                    b.Property<string>("MedicationEndpointParameters")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("ObservationEndpoint")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("ObservationEndpointParameters")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("PatientEndpoint")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("PatientEndpointParameters")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("ProcedureEndpoint")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("ProcedureEndpointParameters")
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)");
 
