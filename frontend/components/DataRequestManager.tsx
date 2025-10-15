@@ -12,8 +12,10 @@ import {
   Calendar,
   Eye,
   Check,
-  X
+  X,
+  Loader2
 } from 'lucide-react';
+import { toast } from 'react-toastify';
 import { dataRequestService } from '@/lib/api';
 import PatientDataDisplay from './PatientDataDisplay';
 
@@ -61,6 +63,7 @@ export default function DataRequestManager({ userRole }: DataRequestManagerProps
   const [showDataModal, setShowDataModal] = useState(false);
   const [selectedData, setSelectedData] = useState<string>('');
   const [selectedDataType, setSelectedDataType] = useState<string>('');
+  const [approvingRequestId, setApprovingRequestId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -83,19 +86,30 @@ export default function DataRequestManager({ userRole }: DataRequestManagerProps
   };
 
   const handleApproveRequest = async (requestId: string, isApproved: boolean) => {
+    setApprovingRequestId(requestId);
+    
     try {
-      await dataRequestService.approveRequest({
+      const response = await dataRequestService.approveRequest({
         requestId,
         isApproved,
         reason: approvalReason
       });
       
+      if (isApproved) {
+        toast.success(`Request approved successfully! Data has been retrieved and is ready for viewing.`);
+      } else {
+        toast.info(`Request denied. The requesting hospital has been notified.`);
+      }
+      
       setShowApprovalModal(false);
       setSelectedRequest(null);
       setApprovalReason('');
       await fetchData();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error approving request:', error);
+      toast.error(`Failed to ${isApproved ? 'approve' : 'deny'} request: ${error.response?.data?.message || error.message}`);
+    } finally {
+      setApprovingRequestId(null);
     }
   };
 
@@ -362,17 +376,27 @@ export default function DataRequestManager({ userRole }: DataRequestManagerProps
               <div className="flex space-x-3">
                 <button
                   onClick={() => handleApproveRequest(selectedRequest.id, true)}
-                  className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                  disabled={approvingRequestId === selectedRequest.id}
+                  className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <Check className="h-4 w-4 mr-2" />
-                  Approve
+                  {approvingRequestId === selectedRequest.id ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Check className="h-4 w-4 mr-2" />
+                  )}
+                  {approvingRequestId === selectedRequest.id ? 'Approving...' : 'Approve'}
                 </button>
                 <button
                   onClick={() => handleApproveRequest(selectedRequest.id, false)}
-                  className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                  disabled={approvingRequestId === selectedRequest.id}
+                  className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <X className="h-4 w-4 mr-2" />
-                  Deny
+                  {approvingRequestId === selectedRequest.id ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <X className="h-4 w-4 mr-2" />
+                  )}
+                  {approvingRequestId === selectedRequest.id ? 'Denying...' : 'Deny'}
                 </button>
                 <button
                   onClick={() => {

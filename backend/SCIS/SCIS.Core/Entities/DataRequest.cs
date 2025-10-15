@@ -36,8 +36,7 @@ public class DataRequest
     public DateTime? ResponseDate { get; set; }
     public DateTime? ApprovalDate { get; set; }
     
-    [MaxLength(1000)]
-    public string? ResponseData { get; set; } // FHIR JSON response
+    public string? ResponseData { get; set; } // FHIR JSON response - can be large
     
     [MaxLength(1000)]
     public string? DenialReason { get; set; }
