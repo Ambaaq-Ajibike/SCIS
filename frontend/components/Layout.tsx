@@ -30,7 +30,6 @@ export default function Layout({ children }: LayoutProps) {
     { name: 'Dashboard', href: '/dashboard', icon: BarChart3, roles: ['SystemManager', 'HospitalManager', 'Doctor', 'Staff', 'Patient'] },
     { name: 'Patients', href: '/patients', icon: Users, roles: ['SystemManager', 'HospitalManager', 'Doctor', 'Staff'] },
     { name: 'Data Requests', href: '/data-requests', icon: Database, roles: ['SystemManager', 'HospitalManager', 'Doctor', 'Staff'] },
-    { name: 'Analytics', href: '/analytics', icon: Brain, roles: ['SystemManager', 'HospitalManager', 'Doctor'] },
     { name: 'Hospitals', href: '/hospitals', icon: Building2, roles: ['SystemManager'] },
     { name: 'Hospital Settings', href: '/hospital-settings', icon: Settings, roles: ['SystemManager', 'HospitalManager'] },
   ];

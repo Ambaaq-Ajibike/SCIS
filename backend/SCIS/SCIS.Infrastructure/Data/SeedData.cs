@@ -13,6 +13,7 @@ public static class SeedData
         // Check if data already exists
         context.PatientFeedbacks.RemoveRange(await context.PatientFeedbacks.ToListAsync());
         context.PatientConsents.RemoveRange(await context.PatientConsents.ToListAsync());
+        context.DataRequestEndpoints.RemoveRange(await context.DataRequestEndpoints.ToListAsync());
         context.Users.RemoveRange(await context.Users.ToListAsync());
         context.Patients.RemoveRange(await context.Patients.ToListAsync());
         context.Hospitals.RemoveRange(await context.Hospitals.ToListAsync());
@@ -27,6 +28,9 @@ public static class SeedData
 
         context.Hospitals.AddRange(hospital1, hospital2, hospital3, hospital4, hospital5);
         await context.SaveChangesAsync();
+
+        // Create DataRequestEndpoints for each hospital with FHIR endpoints
+        await SeedDataRequestEndpoints(context, hospital1, hospital2, hospital3, hospital4, hospital5);
 
         // Create users
         var manager1 = new User { Username = "manager1", Email = "manager1@citygeneral.com", PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"), Role = "HospitalManager", HospitalId = hospital1.Id };
@@ -109,6 +113,101 @@ public static class SeedData
             hospital.PerformanceIndex = performanceIndex;
         }
 
+        await context.SaveChangesAsync();
+    }
+
+    private static async Task SeedDataRequestEndpoints(SCISDbContext context, Hospital hospital1, Hospital hospital2, Hospital hospital3, Hospital hospital4, Hospital hospital5)
+    {
+        var baseFhirUrl = "https://hapi.fhir.org/baseR4";
+        var endpoints = new List<DataRequestEndpoint>();
+
+        // Define common data types and their corresponding FHIR endpoints
+        var dataTypeConfigs = new[]
+        {
+            // Lab Results - Use all diagnostic reports (includes lab reports, imaging, etc.)
+            new { DataType = "LabResults", DisplayName = "Lab Results", FhirResource = "DiagnosticReport", Endpoint = $"{baseFhirUrl}/DiagnosticReport?patient={{patientId}}" },
+            
+            // Medical History - Use conditions
+            new { DataType = "MedicalHistory", DisplayName = "Medical History", FhirResource = "Condition", Endpoint = $"{baseFhirUrl}/Condition?patient={{patientId}}" },
+            
+            // Treatment Records - Use procedures
+            new { DataType = "TreatmentRecords", DisplayName = "Treatment Records", FhirResource = "Procedure", Endpoint = $"{baseFhirUrl}/Procedure?patient={{patientId}}" },
+            
+            // Patient Demographics - Direct patient resource
+            new { DataType = "PatientDemographics", DisplayName = "Patient Demographics", FhirResource = "Patient", Endpoint = $"{baseFhirUrl}/Patient/{{patientId}}" },
+            
+            // Vital Signs - Use observations with vital-signs category
+            new { DataType = "VitalSigns", DisplayName = "Vital Signs", FhirResource = "Observation", Endpoint = $"{baseFhirUrl}/Observation?patient={{patientId}}&category=vital-signs" },
+            
+            // Medications - Use medication requests
+            new { DataType = "Medications", DisplayName = "Medications", FhirResource = "MedicationRequest", Endpoint = $"{baseFhirUrl}/MedicationRequest?patient={{patientId}}" },
+            
+            // Procedures - Use procedures
+            new { DataType = "Procedures", DisplayName = "Procedures", FhirResource = "Procedure", Endpoint = $"{baseFhirUrl}/Procedure?patient={{patientId}}" },
+            
+            // Diagnostic Reports - Use all diagnostic reports
+            new { DataType = "DiagnosticReports", DisplayName = "Diagnostic Reports", FhirResource = "DiagnosticReport", Endpoint = $"{baseFhirUrl}/DiagnosticReport?patient={{patientId}}" },
+            
+            // Encounters - Use encounters
+            new { DataType = "Encounters", DisplayName = "Encounters", FhirResource = "Encounter", Endpoint = $"{baseFhirUrl}/Encounter?patient={{patientId}}" },
+            
+            // Conditions - Use conditions
+            new { DataType = "Conditions", DisplayName = "Conditions", FhirResource = "Condition", Endpoint = $"{baseFhirUrl}/Condition?patient={{patientId}}" },
+            
+            // Allergies - Use allergy intolerance
+            new { DataType = "Allergies", DisplayName = "Allergies", FhirResource = "AllergyIntolerance", Endpoint = $"{baseFhirUrl}/AllergyIntolerance?patient={{patientId}}" },
+            
+            // Immunizations - Use immunizations
+            new { DataType = "Immunizations", DisplayName = "Immunizations", FhirResource = "Immunization", Endpoint = $"{baseFhirUrl}/Immunization?patient={{patientId}}" }
+        };
+
+        // Create endpoints for each hospital
+        var hospitals = new[] { hospital1, hospital2, hospital3, hospital4, hospital5 };
+        
+        foreach (var hospital in hospitals)
+        {
+            foreach (var config in dataTypeConfigs)
+            {
+                // Determine allowed roles based on data type
+                var allowedRoles = config.DataType switch
+                {
+                    "LabResults" => "[\"Doctor\", \"Staff\", \"HospitalManager\"]",
+                    "MedicalHistory" => "[\"Doctor\", \"HospitalManager\"]",
+                    "TreatmentRecords" => "[\"Doctor\", \"HospitalManager\"]",
+                    "PatientDemographics" => "[\"Doctor\", \"Staff\", \"HospitalManager\"]",
+                    "VitalSigns" => "[\"Doctor\", \"Staff\", \"HospitalManager\"]",
+                    "Medications" => "[\"Doctor\", \"HospitalManager\"]",
+                    "Procedures" => "[\"Doctor\", \"HospitalManager\"]",
+                    "DiagnosticReports" => "[\"Doctor\", \"Staff\", \"HospitalManager\"]",
+                    "Encounters" => "[\"Doctor\", \"Staff\", \"HospitalManager\"]",
+                    "Conditions" => "[\"Doctor\", \"HospitalManager\"]",
+                    "Allergies" => "[\"Doctor\", \"Staff\", \"HospitalManager\"]",
+                    "Immunizations" => "[\"Doctor\", \"Staff\", \"HospitalManager\"]",
+                    _ => "[\"Doctor\", \"HospitalManager\"]"
+                };
+
+                var endpoint = new DataRequestEndpoint
+                {
+                    HospitalId = hospital.Id,
+                    DataType = config.DataType,
+                    DataTypeDisplayName = config.DisplayName,
+                    EndpointUrl = config.Endpoint,
+                    FhirResourceType = config.FhirResource,
+                    HttpMethod = "GET",
+                    Description = $"FHIR endpoint for {config.DisplayName} using {config.FhirResource} resource",
+                    IsActive = true,
+                    AllowedRoles = allowedRoles,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow,
+                    IsEndpointValid = true, // Assume valid for demo purposes
+                    LastValidationDate = DateTime.UtcNow
+                };
+
+                endpoints.Add(endpoint);
+            }
+        }
+
+        context.DataRequestEndpoints.AddRange(endpoints);
         await context.SaveChangesAsync();
     }
 }

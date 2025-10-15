@@ -5,6 +5,7 @@ import { hospitalSettingsService, hospitalService, HospitalSettingsDto, CreateHo
 import { useAuth } from '@/lib/auth';
 import Layout from '../../components/Layout';
 import EndpointParameterConfig from '../../components/EndpointParameterConfig';
+import DataRequestEndpointManager from '../../components/DataRequestEndpointManager';
 import { toast } from 'react-toastify';
 
 interface EndpointField {
@@ -461,6 +462,14 @@ export default function HospitalSettingsPage() {
                     >
                       {saving ? 'Saving...' : 'Save Settings'}
                     </button>
+                  </div>
+
+                  {/* Data Request Endpoints Manager */}
+                  <div className="mt-8">
+                    <DataRequestEndpointManager 
+                      hospitalId={selectedHospitalId} 
+                      userRole={user?.role || ''} 
+                    />
                   </div>
 
                   {/* Settings Summary */}

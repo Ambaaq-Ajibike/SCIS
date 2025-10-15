@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using SCIS.Infrastructure.Data;
@@ -11,9 +12,11 @@ using SCIS.Infrastructure.Data;
 namespace SCIS.Infrastructure.Migrations
 {
     [DbContext(typeof(SCISDbContext))]
-    partial class SCISDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251015150452_QuickFix")]
+    partial class QuickFix
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

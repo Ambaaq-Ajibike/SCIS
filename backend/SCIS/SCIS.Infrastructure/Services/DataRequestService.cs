@@ -459,12 +459,24 @@ public class DataRequestService : IDataRequestService
 
     public async Task<string> CallPatientEndpointAsync(string patientId, string patientHospitalId, string dataType)
     {
+        // First try to get the specific endpoint for this data type
+        var dataRequestEndpoint = await _context.DataRequestEndpoints
+            .FirstOrDefaultAsync(e => e.HospitalId.ToString() == patientHospitalId 
+                && e.DataType == dataType 
+                && e.IsActive);
+
+        if (dataRequestEndpoint != null)
+        {
+            return await CallSpecificEndpointAsync(patientId, dataRequestEndpoint);
+        }
+
+        // Fallback to the legacy PatientEverythingEndpoint
         var hospitalSettings = await _context.HospitalSettings
             .FirstOrDefaultAsync(hs => hs.HospitalId.ToString() == patientHospitalId && hs.IsActive);
 
         if (hospitalSettings == null || string.IsNullOrEmpty(hospitalSettings.PatientEverythingEndpoint))
         {
-            throw new InvalidOperationException("Hospital endpoint not configured");
+            throw new InvalidOperationException($"No endpoint configured for data type '{dataType}' and hospital '{patientHospitalId}'");
         }
 
         var patient = await _context.Patients.FirstOrDefaultAsync(p => p.PatientId == patientId);
@@ -487,6 +499,69 @@ public class DataRequestService : IDataRequestService
         if (!string.IsNullOrEmpty(hospitalSettings.AuthToken))
         {
             request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", hospitalSettings.AuthToken);
+        }
+
+        var response = await _httpClient.SendAsync(request);
+        
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new HttpRequestException($"Endpoint call failed with status: {response.StatusCode}");
+        }
+
+        var responseContent = await response.Content.ReadAsStringAsync();
+        return responseContent;
+    }
+
+    private async Task<string> CallSpecificEndpointAsync(string patientId, DataRequestEndpoint endpoint)
+    {
+        var patient = await _context.Patients.FirstOrDefaultAsync(p => p.PatientId == patientId);
+        if (patient == null)
+        {
+            throw new ArgumentException("Patient not found");
+        }
+
+        // Replace {patientId} placeholder in the endpoint URL
+        var endpointUrl = endpoint.EndpointUrl.Replace("{patientId}", patient.PatientId);
+
+        var httpMethod = endpoint.HttpMethod.ToUpper() switch
+        {
+            "POST" => HttpMethod.Post,
+            "PUT" => HttpMethod.Put,
+            "DELETE" => HttpMethod.Delete,
+            _ => HttpMethod.Get
+        };
+
+        var request = new HttpRequestMessage(httpMethod, endpointUrl);
+        
+        // Add authentication headers if configured
+        if (!string.IsNullOrEmpty(endpoint.ApiKey))
+        {
+            request.Headers.Add("X-API-Key", endpoint.ApiKey);
+        }
+        
+        if (!string.IsNullOrEmpty(endpoint.AuthToken))
+        {
+            request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", endpoint.AuthToken);
+        }
+
+        // Add any additional parameters if configured
+        if (!string.IsNullOrEmpty(endpoint.EndpointParameters))
+        {
+            try
+            {
+                var parameters = JsonSerializer.Deserialize<Dictionary<string, string>>(endpoint.EndpointParameters);
+                if (parameters != null)
+                {
+                    foreach (var param in parameters)
+                    {
+                        request.Headers.Add(param.Key, param.Value);
+                    }
+                }
+            }
+            catch (JsonException)
+            {
+                // Ignore invalid JSON in parameters
+            }
         }
 
         var response = await _httpClient.SendAsync(request);
@@ -565,4 +640,5 @@ public class DataRequestService : IDataRequestService
             performer = new[] { new { reference = $"Organization/{patient.HospitalId}" } }
         };
     }
+
 }

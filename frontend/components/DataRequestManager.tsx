@@ -67,6 +67,17 @@ export default function DataRequestManager({ userRole }: DataRequestManagerProps
 
   useEffect(() => {
     fetchData();
+    
+    // Listen for refresh events from the modal
+    const handleRefresh = () => {
+      fetchData();
+    };
+    
+    window.addEventListener('refreshDataRequests', handleRefresh);
+    
+    return () => {
+      window.removeEventListener('refreshDataRequests', handleRefresh);
+    };
   }, []);
 
   const fetchData = async () => {

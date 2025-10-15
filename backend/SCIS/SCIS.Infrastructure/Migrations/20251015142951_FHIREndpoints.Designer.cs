@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using SCIS.Infrastructure.Data;
@@ -11,9 +12,11 @@ using SCIS.Infrastructure.Data;
 namespace SCIS.Infrastructure.Migrations
 {
     [DbContext(typeof(SCISDbContext))]
-    partial class SCISDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251015142951_FHIREndpoints")]
+    partial class FHIREndpoints
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -139,7 +142,8 @@ namespace SCIS.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<string>("ResponseData")
-                        .HasColumnType("text");
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
 
                     b.Property<DateTime?>("ResponseDate")
                         .HasColumnType("timestamp with time zone");

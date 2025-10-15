@@ -14,7 +14,7 @@ import {
   AlertCircle,
   CheckCircle
 } from 'lucide-react';
-import FhirBundleDisplay from './FhirBundleDisplay';
+import FHIRDataDisplay from './FHIRDataDisplay';
 
 interface PatientDataDisplayProps {
   data: string;
@@ -282,7 +282,7 @@ export default function PatientDataDisplay({ data, dataType }: PatientDataDispla
 
   // Check if this is a FHIR Bundle and use the specialized component
   if (parsed.resourceType === 'Bundle') {
-    return <FhirBundleDisplay data={data} />;
+    return <FHIRDataDisplay dataType={dataType} fhirData={data} />;
   }
 
   return (

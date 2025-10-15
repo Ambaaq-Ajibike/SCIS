@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   FileText, 
   User, 
@@ -24,14 +24,53 @@ export default function DataRequestForm({ onRequestSubmitted, onIntraHospitalSuc
   });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [availableDataTypes, setAvailableDataTypes] = useState<string[]>([]);
 
-  const dataTypes = [
+  // Default data types as fallback
+  const defaultDataTypes = [
     { value: 'LabResults', label: 'Lab Results' },
     { value: 'MedicalHistory', label: 'Medical History' },
     { value: 'TreatmentRecords', label: 'Treatment Records' },
-    { value: 'ImagingReports', label: 'Imaging Reports' },
-    { value: 'MedicationHistory', label: 'Medication History' }
+    { value: 'PatientDemographics', label: 'Patient Demographics' },
+    { value: 'VitalSigns', label: 'Vital Signs' },
+    { value: 'Medications', label: 'Medications' },
+    { value: 'Procedures', label: 'Procedures' },
+    { value: 'DiagnosticReports', label: 'Diagnostic Reports' },
+    { value: 'Encounters', label: 'Encounters' },
+    { value: 'Conditions', label: 'Conditions' },
+    { value: 'Allergies', label: 'Allergies' },
+    { value: 'Immunizations', label: 'Immunizations' }
   ];
+
+  // Fetch available data types from API
+  useEffect(() => {
+    const fetchDataTypes = async () => {
+      try {
+        const response = await fetch('/api/datarequestendpoint/data-types');
+        if (response.ok) {
+          const dataTypes = await response.json();
+          setAvailableDataTypes(dataTypes);
+        }
+      } catch (error) {
+        console.error('Failed to fetch data types:', error);
+        // Use default data types if API call fails
+        setAvailableDataTypes(defaultDataTypes.map(dt => dt.value));
+      }
+    };
+
+    fetchDataTypes();
+  }, []);
+
+  // Create data types array with labels
+  const dataTypes = availableDataTypes.length > 0 
+    ? availableDataTypes.map(value => {
+        const defaultType = defaultDataTypes.find(dt => dt.value === value);
+        return {
+          value,
+          label: defaultType?.label || value.replace(/([A-Z])/g, ' $1').trim()
+        };
+      })
+    : defaultDataTypes;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,12 +133,8 @@ export default function DataRequestForm({ onRequestSubmitted, onIntraHospitalSuc
   };
 
   return (
-    <div className="bg-white shadow rounded-lg">
+    <div className="bg-white">
       <div className="px-4 py-5 sm:p-6">
-        <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
-          <FileText className="h-5 w-5 text-primary-600 mr-2" />
-          Request Patient Data
-        </h3>
         
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Patient ID */}

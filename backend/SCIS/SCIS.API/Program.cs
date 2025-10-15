@@ -86,6 +86,7 @@ builder.Services.AddAuthorization();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IPatientAuthService, PatientAuthService>();
 builder.Services.AddScoped<IDataRequestService, DataRequestService>();
+builder.Services.AddScoped<IDataRequestEndpointService, DataRequestEndpointService>();
 builder.Services.AddScoped<IFeedbackService, FeedbackService>();
 builder.Services.AddScoped<IMLService, MLService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
@@ -94,6 +95,7 @@ builder.Services.AddScoped<IFhirValidationService, FhirValidationService>();
 builder.Services.AddHttpClient<EmailService>();
 builder.Services.AddHttpClient<FhirValidationService>();
 builder.Services.AddHttpClient<DataRequestService>();
+builder.Services.AddHttpClient<DataRequestEndpointService>();
 
 
 var app = builder.Build();
@@ -122,7 +124,7 @@ using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<SCISDbContext>();
     context.Database.EnsureCreated();
-    //await SCIS.Infrastructure.Data.SeedData.SeedAsync(context);
+    await SCIS.Infrastructure.Data.SeedData.SeedAsync(context);
 }
 
 app.Run();

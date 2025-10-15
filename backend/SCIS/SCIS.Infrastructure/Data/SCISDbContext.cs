@@ -66,6 +66,7 @@ public class SCISDbContext : DbContext
     public DbSet<PatientFeedback> PatientFeedbacks { get; set; }
     public DbSet<AuditLog> AuditLogs { get; set; }
     public DbSet<HospitalSettings> HospitalSettings { get; set; }
+    public DbSet<DataRequestEndpoint> DataRequestEndpoints { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -146,6 +147,29 @@ public class SCISDbContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
+        // DataRequestEndpoint configuration
+        modelBuilder.Entity<DataRequestEndpoint>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasDefaultValueSql("gen_random_uuid()");
+            entity.Property(e => e.DataType).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.DataTypeDisplayName).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.EndpointUrl).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.FhirResourceType).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.ApiKey).HasMaxLength(100);
+            entity.Property(e => e.AuthToken).HasMaxLength(100);
+            entity.Property(e => e.HttpMethod).HasMaxLength(50);
+            entity.Property(e => e.Description).HasMaxLength(1000);
+            entity.Property(e => e.LastValidationError).HasMaxLength(1000);
+            entity.Property(e => e.EndpointParameters).HasMaxLength(2000);
+            entity.Property(e => e.AllowedRoles).HasMaxLength(500);
+            
+            entity.HasOne(e => e.Hospital)
+                .WithMany(h => h.DataRequestEndpoints)
+                .HasForeignKey(e => e.HospitalId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
         // Patient configuration
         modelBuilder.Entity<Patient>(entity =>
         {
@@ -198,7 +222,7 @@ public class SCISDbContext : DbContext
             entity.Property(e => e.DataType).IsRequired().HasMaxLength(50);
             entity.Property(e => e.Purpose).HasMaxLength(1000);
             entity.Property(e => e.Status).IsRequired().HasMaxLength(20);
-            entity.Property(e => e.ResponseData).HasMaxLength(1000);
+            entity.Property(e => e.ResponseData).HasColumnType("text"); // Allow large FHIR responses
             entity.Property(e => e.DenialReason).HasMaxLength(1000);
             
             entity.HasOne(e => e.RequestingUser)
@@ -283,5 +307,9 @@ public class SCISDbContext : DbContext
             
         modelBuilder.Entity<AuditLog>()
             .HasIndex(e => e.Timestamp);
+            
+        modelBuilder.Entity<DataRequestEndpoint>()
+            .HasIndex(e => new { e.HospitalId, e.DataType })
+            .IsUnique();
     }
 }

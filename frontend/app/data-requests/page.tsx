@@ -262,15 +262,35 @@ export default function DataRequestsPage() {
 
           {/* New Request Modal */}
           {showNewRequest && (
-            <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+            <div 
+              className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50"
+              onClick={(e) => {
+                if (e.target === e.currentTarget) {
+                  setShowNewRequest(false);
+                }
+              }}
+            >
               <div className="relative top-10 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white">
-                 <DataRequestForm 
-                   onRequestSubmitted={() => {
-                     // Refresh data request manager when a new request is submitted
-                     window.location.reload();
-                   }}
-                   onIntraHospitalSuccess={handleIntraHospitalSuccess}
-                 />
+                {/* Modal Header with Close Button */}
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-medium text-gray-900">Request Patient Data</h3>
+                  <button
+                    onClick={() => setShowNewRequest(false)}
+                    className="text-gray-400 hover:text-gray-600 focus:outline-none focus:text-gray-600"
+                  >
+                    <X className="h-6 w-6" />
+                  </button>
+                </div>
+                
+                <DataRequestForm 
+                  onRequestSubmitted={() => {
+                    // Close modal and refresh data request manager
+                    setShowNewRequest(false);
+                    // Trigger a refresh of the DataRequestManager component
+                    window.dispatchEvent(new CustomEvent('refreshDataRequests'));
+                  }}
+                  onIntraHospitalSuccess={handleIntraHospitalSuccess}
+                />
               </div>
             </div>
           )}
