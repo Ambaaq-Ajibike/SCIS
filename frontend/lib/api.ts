@@ -524,4 +524,120 @@ export const dashboardService = {
   },
 };
 
+// System Manager Types
+export interface SystemAnalytics {
+  totalHospitals: number;
+  totalPatients: number;
+  totalDataRequests: number;
+  totalDoctors: number;
+  totalStaff: number;
+  activeHospitals: number;
+  activePatients: number;
+  lastUpdated: string;
+}
+
+export interface HospitalAnalytics {
+  hospitalId: string;
+  hospitalName: string;
+  address: string;
+  phoneNumber: string;
+  email: string;
+  isActive: boolean;
+  createdAt: string;
+  totalPatients: number;
+  totalDoctors: number;
+  totalStaff: number;
+  totalDataRequests: number;
+  pendingDataRequests: number;
+  approvedDataRequests: number;
+  deniedDataRequests: number;
+  averageResponseTimeMs: number;
+  averageTreatmentEvaluationScore: number;
+  totalFeedbacks: number;
+}
+
+export interface DoctorPerformance {
+  doctorId: string;
+  doctorName: string;
+  email: string;
+  specialty: string;
+  hospitalId: string;
+  hospitalName: string;
+  isActive: boolean;
+  totalPatients: number;
+  totalDataRequests: number;
+  totalFeedbacks: number;
+  averageTreatmentEvaluationScore: number;
+  averageSentimentScore: number;
+  lastActivity: string;
+}
+
+export interface SystemManagerDashboard {
+  systemAnalytics: SystemAnalytics;
+  hospitalAnalytics: HospitalAnalytics[];
+  topPerformingDoctors: DoctorPerformance[];
+  recentDataRequests: DataRequestResponse[];
+  recentFeedbacks: PatientFeedbackResponse[];
+}
+
+export interface HospitalDetail {
+  hospitalInfo: HospitalAnalytics;
+  doctors: DoctorPerformance[];
+  patients: Patient[];
+  dataRequests: DataRequestResponse[];
+  feedbacks: PatientFeedbackResponse[];
+}
+
+export const systemManagerService = {
+  getDashboard: async (): Promise<SystemManagerDashboard> => {
+    const response = await api.get('/systemmanager/dashboard');
+    return response.data;
+  },
+
+  getSystemAnalytics: async (): Promise<SystemAnalytics> => {
+    const response = await api.get('/systemmanager/analytics');
+    return response.data;
+  },
+
+  getAllHospitals: async (): Promise<HospitalAnalytics[]> => {
+    const response = await api.get('/systemmanager/hospitals');
+    return response.data;
+  },
+
+  getHospitalDetail: async (hospitalId: string): Promise<HospitalDetail> => {
+    const response = await api.get(`/systemmanager/hospitals/${hospitalId}`);
+    return response.data;
+  },
+
+  getAllDoctors: async (): Promise<DoctorPerformance[]> => {
+    const response = await api.get('/systemmanager/doctors');
+    return response.data;
+  },
+
+  getDoctorsByHospital: async (hospitalId: string): Promise<DoctorPerformance[]> => {
+    const response = await api.get(`/systemmanager/hospitals/${hospitalId}/doctors`);
+    return response.data;
+  },
+
+  getAllDataRequests: async (): Promise<DataRequestResponse[]> => {
+    const response = await api.get('/systemmanager/data-requests');
+    return response.data;
+  },
+
+  getDataRequestsByHospital: async (hospitalId: string): Promise<DataRequestResponse[]> => {
+    const response = await api.get(`/systemmanager/hospitals/${hospitalId}/data-requests`);
+    return response.data;
+  },
+
+  getAllFeedbacks: async (): Promise<PatientFeedbackResponse[]> => {
+    const response = await api.get('/systemmanager/feedbacks');
+    return response.data;
+  },
+
+  getFeedbacksByHospital: async (hospitalId: string): Promise<PatientFeedbackResponse[]> => {
+    const response = await api.get(`/systemmanager/hospitals/${hospitalId}/feedbacks`);
+    return response.data;
+  },
+};
+
 export default api;

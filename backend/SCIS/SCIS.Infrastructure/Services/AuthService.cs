@@ -108,6 +108,7 @@ public class AuthService(SCISDbContext _context, IConfiguration _configuration) 
         // Simple role-based permissions
         return user.Role switch
         {
+            "SystemManager" => true, // System Manager has full read-only access
             "HospitalManager" => true,
             "Doctor" => permission is "ViewPatientData" or "RequestData" or "SubmitFeedback",
             "Staff" => permission is "ViewPatientData" or "RequestData",

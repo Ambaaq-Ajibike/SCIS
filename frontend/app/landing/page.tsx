@@ -100,7 +100,13 @@ export default function LandingPage() {
                 onClick={() => router.push('/login')}
                 className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
               >
-                Login
+                Hospital Login
+              </button>
+              <button
+                onClick={() => router.push('/system-manager-login')}
+                className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
+              >
+                System Manager
               </button>
               <button
                 onClick={() => router.push('/feedback')}

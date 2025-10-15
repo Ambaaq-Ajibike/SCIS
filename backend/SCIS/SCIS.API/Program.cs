@@ -92,6 +92,7 @@ builder.Services.AddScoped<IMLService, MLService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IHospitalSettingsService, HospitalSettingsService>();
 builder.Services.AddScoped<IFhirValidationService, FhirValidationService>();
+builder.Services.AddScoped<ISystemManagerService, SystemManagerService>();
 builder.Services.AddHttpClient<EmailService>();
 builder.Services.AddHttpClient<FhirValidationService>();
 builder.Services.AddHttpClient<DataRequestService>();
@@ -124,7 +125,7 @@ using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<SCISDbContext>();
     context.Database.EnsureCreated();
-    //await SCIS.Infrastructure.Data.SeedData.SeedAsync(context);
+    await SCIS.Infrastructure.Data.SeedData.SeedAsync(context);
 }
 
 app.Run();

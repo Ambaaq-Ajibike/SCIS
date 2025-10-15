@@ -51,7 +51,10 @@ public static class SeedData
 
         var patientDemo = new User { Username = "patient_demo", Email = "patient@demo.com", PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"), Role = "Patient", HospitalId = hospital1.Id };
 
-        context.Users.AddRange(manager1, manager2, manager3, manager4, manager5, doctor1, doctor2, doctor3, doctor4, doctor5, staff1, staff2, staff3, patientDemo);
+        // System Manager user
+        var systemManager = new User { Username = "system_manager", Email = "system.manager@scis.com", PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"), Role = "SystemManager", HospitalId = null };
+
+        context.Users.AddRange(manager1, manager2, manager3, manager4, manager5, doctor1, doctor2, doctor3, doctor4, doctor5, staff1, staff2, staff3, patientDemo, systemManager);
         await context.SaveChangesAsync();
 
         // Create patients
