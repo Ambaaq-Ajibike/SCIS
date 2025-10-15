@@ -37,7 +37,7 @@ public class DataRequestEndpointController : ControllerBase
                 .FirstOrDefaultAsync(u => u.Id == userId);
 
             if (user?.HospitalId != hospitalId && user?.Role != "SystemAdmin")
-                return Forbid("Access denied to this hospital's endpoints");
+                return Forbid();
 
             var endpoints = await _endpointService.GetEndpointsByHospitalAsync(hospitalId);
             return Ok(endpoints);
@@ -67,7 +67,7 @@ public class DataRequestEndpointController : ControllerBase
                 .FirstOrDefaultAsync(u => u.Id == userId);
 
             if (user?.HospitalId != endpoint.HospitalId && user?.Role != "SystemAdmin")
-                return Forbid("Access denied to this endpoint");
+                return Forbid();
 
             return Ok(endpoint);
         }
@@ -92,11 +92,11 @@ public class DataRequestEndpointController : ControllerBase
                 .FirstOrDefaultAsync(u => u.Id == userId);
 
             if (user?.HospitalId != createDto.HospitalId && user?.Role != "SystemAdmin")
-                return Forbid("Access denied to create endpoints for this hospital");
+                return Forbid();
 
             // Check if user has permission to create endpoints
             if (user?.Role != "HospitalManager" && user?.Role != "SystemAdmin")
-                return Forbid("Insufficient permissions to create endpoints");
+                return Forbid();
 
             var endpoint = await _endpointService.CreateEndpointAsync(createDto);
             return CreatedAtAction(nameof(GetEndpointById), new { endpointId = endpoint.Id }, endpoint);
@@ -126,11 +126,11 @@ public class DataRequestEndpointController : ControllerBase
                 .FirstOrDefaultAsync(u => u.Id == userId);
 
             if (user?.HospitalId != existingEndpoint.HospitalId && user?.Role != "SystemAdmin")
-                return Forbid("Access denied to update this endpoint");
+                return Forbid();
 
             // Check if user has permission to update endpoints
             if (user?.Role != "HospitalManager" && user?.Role != "SystemAdmin")
-                return Forbid("Insufficient permissions to update endpoints");
+                return Forbid();
 
             var endpoint = await _endpointService.UpdateEndpointAsync(endpointId, updateDto);
             return Ok(endpoint);
@@ -160,11 +160,11 @@ public class DataRequestEndpointController : ControllerBase
                 .FirstOrDefaultAsync(u => u.Id == userId);
 
             if (user?.HospitalId != existingEndpoint.HospitalId && user?.Role != "SystemAdmin")
-                return Forbid("Access denied to delete this endpoint");
+                return Forbid();
 
             // Check if user has permission to delete endpoints
             if (user?.Role != "HospitalManager" && user?.Role != "SystemAdmin")
-                return Forbid("Insufficient permissions to delete endpoints");
+                return Forbid();
 
             var success = await _endpointService.DeleteEndpointAsync(endpointId);
             if (!success)
@@ -197,7 +197,7 @@ public class DataRequestEndpointController : ControllerBase
                 .FirstOrDefaultAsync(u => u.Id == userId);
 
             if (user?.HospitalId != existingEndpoint.HospitalId && user?.Role != "SystemAdmin")
-                return Forbid("Access denied to validate this endpoint");
+                return Forbid();
 
             var isValid = await _endpointService.ValidateEndpointAsync(endpointId);
             return Ok(new { isValid = isValid });

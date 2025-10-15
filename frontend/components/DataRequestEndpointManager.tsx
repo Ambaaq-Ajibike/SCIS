@@ -11,6 +11,7 @@ import {
   ExternalLink,
   Settings
 } from 'lucide-react';
+import api from '@/lib/api';
 
 interface DataRequestEndpoint {
   id: string;
@@ -49,17 +50,10 @@ export default function DataRequestEndpointManager({ hospitalId, userRole }: Dat
   const fetchEndpoints = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/datarequestendpoint/hospital/${hospitalId}`, {
-        credentials: 'include'
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setEndpoints(data);
-      } else {
-        setMessage({ type: 'error', text: 'Failed to fetch endpoints' });
-      }
+      const response = await api.get(`/datarequestendpoint/hospital/${hospitalId}`);
+      setEndpoints(response.data);
     } catch (error) {
+      console.error('Error fetching endpoints:', error);
       setMessage({ type: 'error', text: 'Error fetching endpoints' });
     } finally {
       setLoading(false);
@@ -68,18 +62,11 @@ export default function DataRequestEndpointManager({ hospitalId, userRole }: Dat
 
   const validateEndpoint = async (endpointId: string) => {
     try {
-      const response = await fetch(`/api/datarequestendpoint/${endpointId}/validate`, {
-        method: 'POST',
-        credentials: 'include'
-      });
-      
-      if (response.ok) {
-        setMessage({ type: 'success', text: 'Endpoint validation completed' });
-        fetchEndpoints(); // Refresh the list
-      } else {
-        setMessage({ type: 'error', text: 'Failed to validate endpoint' });
-      }
+      await api.post(`/datarequestendpoint/${endpointId}/validate`);
+      setMessage({ type: 'success', text: 'Endpoint validation completed' });
+      fetchEndpoints(); // Refresh the list
     } catch (error) {
+      console.error('Error validating endpoint:', error);
       setMessage({ type: 'error', text: 'Error validating endpoint' });
     }
   };
@@ -90,18 +77,11 @@ export default function DataRequestEndpointManager({ hospitalId, userRole }: Dat
     }
 
     try {
-      const response = await fetch(`/api/datarequestendpoint/${endpointId}`, {
-        method: 'DELETE',
-        credentials: 'include'
-      });
-      
-      if (response.ok) {
-        setMessage({ type: 'success', text: 'Endpoint deleted successfully' });
-        fetchEndpoints(); // Refresh the list
-      } else {
-        setMessage({ type: 'error', text: 'Failed to delete endpoint' });
-      }
+      await api.delete(`/datarequestendpoint/${endpointId}`);
+      setMessage({ type: 'success', text: 'Endpoint deleted successfully' });
+      fetchEndpoints(); // Refresh the list
     } catch (error) {
+      console.error('Error deleting endpoint:', error);
       setMessage({ type: 'error', text: 'Error deleting endpoint' });
     }
   };
