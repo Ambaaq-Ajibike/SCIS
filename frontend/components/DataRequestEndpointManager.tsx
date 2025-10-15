@@ -41,11 +41,40 @@ export default function DataRequestEndpointManager({ hospitalId, userRole }: Dat
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingEndpoint, setEditingEndpoint] = useState<DataRequestEndpoint | null>(null);
+  const [availableDataTypes, setAvailableDataTypes] = useState<string[]>([]);
+  const [availableFhirResourceTypes, setAvailableFhirResourceTypes] = useState<string[]>([]);
+  const [formData, setFormData] = useState({
+    dataType: '',
+    dataTypeDisplayName: '',
+    endpointUrl: '',
+    fhirResourceType: '',
+    httpMethod: 'GET',
+    description: '',
+    isActive: true,
+    apiKey: '',
+    authToken: '',
+    allowedRoles: '["Doctor", "HospitalManager"]'
+  });
+  const [submitting, setSubmitting] = useState(false);
 
-  // Fetch endpoints
+  // Fetch endpoints and available data types
   useEffect(() => {
     fetchEndpoints();
+    fetchAvailableDataTypes();
   }, [hospitalId]);
+
+  const fetchAvailableDataTypes = async () => {
+    try {
+      const [dataTypesResponse, fhirTypesResponse] = await Promise.all([
+        api.get('/datarequestendpoint/data-types'),
+        api.get('/datarequestendpoint/fhir-resource-types')
+      ]);
+      setAvailableDataTypes(dataTypesResponse.data);
+      setAvailableFhirResourceTypes(fhirTypesResponse.data);
+    } catch (error) {
+      console.error('Error fetching available data types:', error);
+    }
+  };
 
   const fetchEndpoints = async () => {
     try {
@@ -83,6 +112,116 @@ export default function DataRequestEndpointManager({ hospitalId, userRole }: Dat
     } catch (error) {
       console.error('Error deleting endpoint:', error);
       setMessage({ type: 'error', text: 'Error deleting endpoint' });
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      dataType: '',
+      dataTypeDisplayName: '',
+      endpointUrl: '',
+      fhirResourceType: '',
+      httpMethod: 'GET',
+      description: '',
+      isActive: true,
+      apiKey: '',
+      authToken: '',
+      allowedRoles: '["Doctor", "HospitalManager"]'
+    });
+    setEditingEndpoint(null);
+    setShowCreateForm(false);
+  };
+
+  const handleInputChange = (field: string, value: string | boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+
+    // Auto-populate display name and FHIR resource type based on data type
+    if (field === 'dataType' && typeof value === 'string') {
+      const displayName = value.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()).trim();
+      const fhirResourceType = getFhirResourceTypeForDataType(value);
+      
+      setFormData(prev => ({
+        ...prev,
+        dataTypeDisplayName: displayName,
+        fhirResourceType: fhirResourceType
+      }));
+    }
+  };
+
+  const getFhirResourceTypeForDataType = (dataType: string): string => {
+    const mapping: Record<string, string> = {
+      'LabResults': 'DiagnosticReport',
+      'MedicalHistory': 'Condition',
+      'TreatmentRecords': 'Procedure',
+      'PatientDemographics': 'Patient',
+      'VitalSigns': 'Observation',
+      'Medications': 'MedicationRequest',
+      'Procedures': 'Procedure',
+      'DiagnosticReports': 'DiagnosticReport',
+      'Encounters': 'Encounter',
+      'Conditions': 'Condition',
+      'Allergies': 'AllergyIntolerance',
+      'Immunizations': 'Immunization'
+    };
+    return mapping[dataType] || 'Bundle';
+  };
+
+  const handleEdit = (endpoint: DataRequestEndpoint) => {
+    setFormData({
+      dataType: endpoint.dataType,
+      dataTypeDisplayName: endpoint.dataTypeDisplayName,
+      endpointUrl: endpoint.endpointUrl,
+      fhirResourceType: endpoint.fhirResourceType,
+      httpMethod: endpoint.httpMethod,
+      description: endpoint.description || '',
+      isActive: endpoint.isActive,
+      apiKey: endpoint.apiKey || '',
+      authToken: endpoint.authToken || '',
+      allowedRoles: endpoint.allowedRoles || '["Doctor", "HospitalManager"]'
+    });
+    setEditingEndpoint(endpoint);
+    setShowCreateForm(true);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+
+    try {
+      const payload = {
+        hospitalId: hospitalId,
+        dataType: formData.dataType,
+        dataTypeDisplayName: formData.dataTypeDisplayName,
+        endpointUrl: formData.endpointUrl,
+        fhirResourceType: formData.fhirResourceType,
+        httpMethod: formData.httpMethod,
+        description: formData.description,
+        isActive: formData.isActive,
+        apiKey: formData.apiKey || undefined,
+        authToken: formData.authToken || undefined,
+        allowedRoles: formData.allowedRoles
+      };
+
+      if (editingEndpoint) {
+        // Update existing endpoint
+        await api.put(`/datarequestendpoint/${editingEndpoint.id}`, payload);
+        setMessage({ type: 'success', text: 'Endpoint updated successfully' });
+      } else {
+        // Create new endpoint
+        await api.post('/datarequestendpoint', payload);
+        setMessage({ type: 'success', text: 'Endpoint created successfully' });
+      }
+
+      resetForm();
+      fetchEndpoints(); // Refresh the list
+    } catch (error) {
+      console.error('Error saving endpoint:', error);
+      setMessage({ type: 'error', text: 'Error saving endpoint' });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -247,7 +386,7 @@ export default function DataRequestEndpointManager({ hospitalId, userRole }: Dat
                     {(userRole === 'HospitalManager' || userRole === 'SystemAdmin') && (
                       <>
                         <button
-                          onClick={() => setEditingEndpoint(endpoint)}
+                          onClick={() => handleEdit(endpoint)}
                           className="text-indigo-600 hover:text-indigo-900 text-sm font-medium"
                           title="Edit endpoint"
                         >
@@ -271,30 +410,216 @@ export default function DataRequestEndpointManager({ hospitalId, userRole }: Dat
         )}
       </div>
 
-      {/* Create/Edit Form Modal would go here */}
-      {/* For now, we'll just show a placeholder */}
+      {/* Create/Edit Form Modal */}
       {(showCreateForm || editingEndpoint) && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-            <div className="mt-3">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">
+          <div className="relative top-10 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium text-gray-900">
                 {editingEndpoint ? 'Edit Endpoint' : 'Create New Endpoint'}
               </h3>
-              <p className="text-sm text-gray-500 mb-4">
-                This feature will be implemented in the next iteration.
-              </p>
-              <div className="flex justify-end space-x-3">
+              <button
+                onClick={resetForm}
+                className="text-gray-400 hover:text-gray-600 focus:outline-none focus:text-gray-600"
+              >
+                <XCircle className="h-6 w-6" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Data Type */}
+                <div>
+                  <label htmlFor="dataType" className="block text-sm font-medium text-gray-700 mb-1">
+                    Data Type *
+                  </label>
+                  <select
+                    id="dataType"
+                    value={formData.dataType}
+                    onChange={(e) => handleInputChange('dataType', e.target.value)}
+                    className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    required
+                  >
+                    <option value="">Select data type</option>
+                    {availableDataTypes.map((type) => (
+                      <option key={type} value={type}>
+                        {type.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()).trim()}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Display Name */}
+                <div>
+                  <label htmlFor="dataTypeDisplayName" className="block text-sm font-medium text-gray-700 mb-1">
+                    Display Name *
+                  </label>
+                  <input
+                    type="text"
+                    id="dataTypeDisplayName"
+                    value={formData.dataTypeDisplayName}
+                    onChange={(e) => handleInputChange('dataTypeDisplayName', e.target.value)}
+                    className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    required
+                  />
+                </div>
+
+                {/* FHIR Resource Type */}
+                <div>
+                  <label htmlFor="fhirResourceType" className="block text-sm font-medium text-gray-700 mb-1">
+                    FHIR Resource Type *
+                  </label>
+                  <select
+                    id="fhirResourceType"
+                    value={formData.fhirResourceType}
+                    onChange={(e) => handleInputChange('fhirResourceType', e.target.value)}
+                    className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    required
+                  >
+                    <option value="">Select FHIR resource type</option>
+                    {availableFhirResourceTypes.map((type) => (
+                      <option key={type} value={type}>
+                        {type}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* HTTP Method */}
+                <div>
+                  <label htmlFor="httpMethod" className="block text-sm font-medium text-gray-700 mb-1">
+                    HTTP Method *
+                  </label>
+                  <select
+                    id="httpMethod"
+                    value={formData.httpMethod}
+                    onChange={(e) => handleInputChange('httpMethod', e.target.value)}
+                    className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    required
+                  >
+                    <option value="GET">GET</option>
+                    <option value="POST">POST</option>
+                    <option value="PUT">PUT</option>
+                    <option value="DELETE">DELETE</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Endpoint URL */}
+              <div>
+                <label htmlFor="endpointUrl" className="block text-sm font-medium text-gray-700 mb-1">
+                  Endpoint URL *
+                </label>
+                <input
+                  type="url"
+                  id="endpointUrl"
+                  value={formData.endpointUrl}
+                  onChange={(e) => handleInputChange('endpointUrl', e.target.value)}
+                  placeholder="https://hapi.fhir.org/baseR4/Patient/{patientId}"
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  required
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Use {`{patientId}`} as placeholder for patient ID
+                </p>
+              </div>
+
+              {/* Description */}
+              <div>
+                <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+                  Description
+                </label>
+                <textarea
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) => handleInputChange('description', e.target.value)}
+                  rows={3}
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Describe what this endpoint returns..."
+                />
+              </div>
+
+              {/* Authentication */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="apiKey" className="block text-sm font-medium text-gray-700 mb-1">
+                    API Key
+                  </label>
+                  <input
+                    type="password"
+                    id="apiKey"
+                    value={formData.apiKey}
+                    onChange={(e) => handleInputChange('apiKey', e.target.value)}
+                    className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Optional API key"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="authToken" className="block text-sm font-medium text-gray-700 mb-1">
+                    Auth Token
+                  </label>
+                  <input
+                    type="password"
+                    id="authToken"
+                    value={formData.authToken}
+                    onChange={(e) => handleInputChange('authToken', e.target.value)}
+                    className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Optional auth token"
+                  />
+                </div>
+              </div>
+
+              {/* Allowed Roles */}
+              <div>
+                <label htmlFor="allowedRoles" className="block text-sm font-medium text-gray-700 mb-1">
+                  Allowed Roles
+                </label>
+                <input
+                  type="text"
+                  id="allowedRoles"
+                  value={formData.allowedRoles}
+                  onChange={(e) => handleInputChange('allowedRoles', e.target.value)}
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  placeholder='["Doctor", "HospitalManager"]'
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  JSON array of roles that can access this endpoint
+                </p>
+              </div>
+
+              {/* Active Status */}
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="isActive"
+                  checked={formData.isActive}
+                  onChange={(e) => handleInputChange('isActive', e.target.checked)}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <label htmlFor="isActive" className="ml-2 block text-sm text-gray-900">
+                  Active (endpoint is enabled)
+                </label>
+              </div>
+
+              {/* Form Actions */}
+              <div className="flex justify-end space-x-3 pt-4 border-t">
                 <button
-                  onClick={() => {
-                    setShowCreateForm(false);
-                    setEditingEndpoint(null);
-                  }}
-                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400"
+                  type="button"
+                  onClick={resetForm}
+                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500"
                 >
-                  Close
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                >
+                  {submitting ? 'Saving...' : (editingEndpoint ? 'Update Endpoint' : 'Create Endpoint')}
                 </button>
               </div>
-            </div>
+            </form>
           </div>
         </div>
       )}
