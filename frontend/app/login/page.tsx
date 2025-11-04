@@ -111,16 +111,29 @@ export default function LoginPage() {
             </button>
           </div>
 
-          <div className="text-center">
-            <p className="text-sm text-gray-600">
-              Demo Credentials:
-            </p>
-            <div className="mt-2 text-xs text-gray-500 space-y-1">
-              <p><strong>System Manager:</strong> admin@scis.com / password123</p>
-              <p><strong>Hospital Manager:</strong> manager1@citygeneral.com / password123</p>
-              <p><strong>Doctor:</strong> sarah.johnson@citygeneral.com / password123</p>
-              <p><strong>Staff:</strong> staff1@citygeneral.com / password123</p>
-              <p><strong>Patient:</strong> patient@demo.com / password123</p>
+          <div className="text-center space-y-4">
+            <div>
+              <p className="text-sm text-gray-600">
+                Don't have an account?
+              </p>
+              <a
+                href="/register-hospital"
+                className="mt-2 inline-block text-sm text-primary-600 hover:text-primary-800 font-medium"
+              >
+                Register Your Hospital
+              </a>
+            </div>
+            <div className="border-t pt-4">
+              <p className="text-sm text-gray-600">
+                Demo Credentials:
+              </p>
+              <div className="mt-2 text-xs text-gray-500 space-y-1">
+                <p><strong>System Manager:</strong> admin@scis.com / password123</p>
+                <p><strong>Hospital Manager:</strong> manager1@citygeneral.com / password123</p>
+                <p><strong>Doctor:</strong> sarah.johnson@citygeneral.com / password123</p>
+                <p><strong>Staff:</strong> staff1@citygeneral.com / password123</p>
+                <p><strong>Patient:</strong> patient@demo.com / password123</p>
+              </div>
             </div>
           </div>
         </form>

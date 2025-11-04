@@ -29,8 +29,10 @@ export default function Layout({ children }: LayoutProps) {
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: BarChart3, roles: ['SystemManager', 'HospitalManager', 'Doctor', 'Staff', 'Patient'] },
     { name: 'Patients', href: '/patients', icon: Users, roles: ['HospitalManager', 'Doctor', 'Staff'] },
+    { name: 'Doctors', href: '/doctors', icon: Users, roles: ['HospitalManager'] },
     { name: 'Data Requests', href: '/data-requests', icon: Database, roles: ['HospitalManager', 'Doctor', 'Staff'] },
     { name: 'Hospitals', href: '/hospitals', icon: Building2, roles: ['SystemManager'] },
+    { name: 'Hospital Approvals', href: '/hospital-approvals', icon: Building2, roles: ['SystemManager'] },
     { name: 'Hospital Settings', href: '/hospital-settings', icon: Settings, roles: ['HospitalManager'] },
   ];
 

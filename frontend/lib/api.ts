@@ -640,4 +640,59 @@ export const systemManagerService = {
   },
 };
 
+export interface RegisterHospitalRequest {
+  hospitalName: string;
+  address: string;
+  phoneNumber?: string;
+  email: string;
+  licenseNumber?: string;
+  managerUsername: string;
+  managerEmail: string;
+  managerPassword: string;
+  contactPersonName: string;
+  contactPersonEmail: string;
+  contactPersonPhone: string;
+  verificationDocuments?: string;
+  verificationNotes?: string;
+}
+
+export interface CreateDoctorRequest {
+  username: string;
+  email: string;
+  password: string;
+  specialty?: string;
+}
+
+export interface ApproveHospitalRequest {
+  hospitalId: string;
+  isApproved: boolean;
+  approvalNotes?: string;
+}
+
+export const onboardingService = {
+  registerHospital: async (data: RegisterHospitalRequest): Promise<LoginResponse> => {
+    const response = await api.post('/onboarding/register-hospital', data);
+    return response.data;
+  },
+
+  createDoctor: async (data: CreateDoctorRequest): Promise<Doctor> => {
+    const response = await api.post('/onboarding/create-doctor', data);
+    return response.data;
+  },
+
+  approveHospital: async (data: ApproveHospitalRequest): Promise<void> => {
+    await api.post('/onboarding/approve-hospital', data);
+  },
+
+  getPendingHospitals: async (): Promise<HospitalDto[]> => {
+    const response = await api.get('/onboarding/pending-hospitals');
+    return response.data;
+  },
+
+  getHospital: async (hospitalId: string): Promise<HospitalDto> => {
+    const response = await api.get(`/onboarding/hospital/${hospitalId}`);
+    return response.data;
+  },
+};
+
 export default api;

@@ -24,7 +24,28 @@ public class Hospital
     public string? LicenseNumber { get; set; }
     
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public bool IsActive { get; set; } = true;
+    public bool IsActive { get; set; } = false; // Default to false, requires approval
+    
+    // Verification and approval fields
+    public bool IsApproved { get; set; } = false;
+    public DateTime? ApprovedAt { get; set; }
+    public Guid? ApprovedByUserId { get; set; }
+    
+    // Verification details
+    [MaxLength(500)]
+    public string? VerificationDocuments { get; set; } // JSON string or comma-separated document references
+    
+    [MaxLength(1000)]
+    public string? VerificationNotes { get; set; } // Additional notes for verification
+    
+    [MaxLength(200)]
+    public string? ContactPersonName { get; set; } // Primary contact person
+    
+    [MaxLength(100)]
+    public string? ContactPersonEmail { get; set; }
+    
+    [MaxLength(20)]
+    public string? ContactPersonPhone { get; set; }
     
     // Performance metrics
     public double AverageTES { get; set; } = 0.0;
