@@ -26,8 +26,7 @@ import {
 } from 'lucide-react';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import Layout from '@/components/Layout';
-import DataRequestManager from '@/components/DataRequestManager';
-import { feedbackService, mlService, dashboardService } from '@/lib/api';
+import { feedbackService, mlService, dashboardService, systemManagerService } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 
 interface DashboardStats {
@@ -72,11 +71,94 @@ export default function Dashboard() {
   const [sentimentData, setSentimentData] = useState<SentimentData[]>([]);
   const [doctorsData, setDoctorsData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'data-requests'>('overview');
+  const [selectedHospitalId, setSelectedHospitalId] = useState<string>('');
+  const [hospitals, setHospitals] = useState<any[]>([]);
+  const [hospitalsLoading, setHospitalsLoading] = useState(false);
 
   useEffect(() => {
     fetchDashboardData();
+    if (user?.role === 'SystemManager') {
+      fetchHospitals();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (user?.role === 'SystemManager' && selectedHospitalId) {
+      fetchDoctorsByHospital(selectedHospitalId);
+    } else if (user?.role === 'SystemManager' && !selectedHospitalId) {
+      fetchDashboardData();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedHospitalId]);
+
+  const fetchHospitals = async () => {
+    try {
+      setHospitalsLoading(true);
+      const hospitalList = await systemManagerService.getAllHospitals();
+      // Ensure hospitalId is a string (in case it comes as GUID object)
+      const formattedHospitals = hospitalList.map((h: any) => ({
+        ...h,
+        hospitalId: String(h.hospitalId || h.HospitalId || ''),
+        hospitalName: h.hospitalName || h.HospitalName || ''
+      }));
+      setHospitals(formattedHospitals);
+      console.log('Hospitals loaded:', formattedHospitals.length);
+    } catch (error) {
+      console.error('Error fetching hospitals:', error);
+      setHospitals([]);
+    } finally {
+      setHospitalsLoading(false);
+    }
+  };
+
+  const fetchDoctorsByHospital = async (hospitalId: string) => {
+    try {
+      setLoading(true);
+      const doctors = await systemManagerService.getDoctorsByHospital(hospitalId);
+      setDoctorsData(doctors);
+      
+      // Update stats to show hospital-specific data
+      // Try to find hospital by different possible ID formats
+      const hospital = hospitals.find(h => 
+        String(h.hospitalId) === String(hospitalId) || 
+        String(h.HospitalId) === String(hospitalId)
+      );
+      
+      if (hospital) {
+        setStats({
+          totalPatients: hospital.totalPatients || 0,
+          totalDoctors: hospital.totalDoctors || doctors.length || 0,
+          averageTES: hospital.averageTreatmentEvaluationScore || 0,
+          interoperabilityRate: hospital.totalDataRequests > 0 
+            ? (hospital.approvedDataRequests / hospital.totalDataRequests) * 100 
+            : 0,
+          performanceIndex: hospital.averageTreatmentEvaluationScore || 0,
+          alertsCount: 0,
+          hospitalName: hospital.hospitalName || hospital.HospitalName
+        });
+      } else {
+        // If hospital not found in list, fetch it or use doctors data
+        console.warn('Hospital not found in list, using doctors data for stats');
+        const avgTES = doctors.length > 0 
+          ? doctors.reduce((sum: number, d: any) => sum + (d.averageTreatmentEvaluationScore || 0), 0) / doctors.length 
+          : 0;
+        setStats({
+          totalPatients: 0,
+          totalDoctors: doctors.length,
+          averageTES: avgTES,
+          interoperabilityRate: 0,
+          performanceIndex: avgTES,
+          alertsCount: 0
+        });
+      }
+
+      setLoading(false);
+    } catch (error) {
+      console.error('Error fetching doctors by hospital:', error);
+      setLoading(false);
+    }
+  };
 
   const fetchDashboardData = async () => {
     try {
@@ -118,12 +200,12 @@ export default function Dashboard() {
     }
   };
 
-  // Prepare TES data based on user role
-  const tesData = user?.role === 'HospitalManager' 
+  // Prepare TES data based on user role and hospital filter
+  const tesData = (user?.role === 'HospitalManager' || (user?.role === 'SystemManager' && selectedHospitalId))
     ? doctorsData.map(d => ({
-        name: d.doctorName.split(' ')[0], // Use first name or first part of username
-        tes: d.averageTES,
-        performance: d.averageTES // For doctors, use TES as performance
+        name: d.doctorName?.split(' ')[0] || d.doctorName || 'Doctor', // Use first name or first part of username
+        tes: d.averageTreatmentEvaluationScore || 0,
+        performance: d.averageTreatmentEvaluationScore || 0 // For doctors, use TES as performance
       }))
     : hospitalPerformance.map(h => ({
         name: h.hospitalName.split(' ')[0],
@@ -161,48 +243,60 @@ export default function Dashboard() {
           {/* Header */}
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-gray-900">
-              {user?.role === 'HospitalManager' ? `${stats.hospitalName || 'Hospital'} Dashboard` : 'System Dashboard'}
+              {user?.role === 'HospitalManager' 
+                ? `${stats.hospitalName || 'Hospital'} Dashboard`
+                : user?.role === 'SystemManager' && selectedHospitalId
+                ? `${hospitals.find(h => h.hospitalId === selectedHospitalId)?.hospitalName || 'Hospital'} Dashboard`
+                : 'System Dashboard'}
             </h1>
             <p className="mt-2 text-gray-600">
               {user?.role === 'HospitalManager' 
                 ? 'Overview of your hospital\'s performance and key metrics'
+                : user?.role === 'SystemManager' && selectedHospitalId
+                ? 'Overview of doctor performance and key metrics for this hospital'
                 : 'System-wide overview of all hospitals and performance metrics'
               }
             </p>
           </div>
 
-          {/* Navigation Tabs */}
-          <div className="mb-8">
-            <nav className="flex space-x-8" aria-label="Tabs">
-              <button
-                onClick={() => setActiveTab('overview')}
-                className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'overview'
-                    ? 'border-primary-500 text-primary-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                Overview
-              </button>
-              <button
-                onClick={() => setActiveTab('data-requests')}
-                className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'data-requests'
-                    ? 'border-primary-500 text-primary-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                Data Requests
-              </button>
-            </nav>
-          </div>
+          {/* Hospital Filter for SystemManager */}
+          {user?.role === 'SystemManager' && (
+            <div className="mb-6 bg-white shadow rounded-lg p-4">
+              <label htmlFor="hospital-filter" className="block text-sm font-medium text-gray-700 mb-2">
+                Filter by Hospital
+              </label>
+              {hospitalsLoading ? (
+                <div className="flex items-center text-sm text-gray-500">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-600 mr-2"></div>
+                  Loading hospitals...
+                </div>
+              ) : (
+                <select
+                  id="hospital-filter"
+                  value={selectedHospitalId}
+                  onChange={(e) => setSelectedHospitalId(e.target.value)}
+                  className="block w-full max-w-xs border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  disabled={hospitals.length === 0}
+                >
+                  <option value="">All Hospitals</option>
+                  {hospitals.map((hospital) => (
+                    <option key={hospital.hospitalId} value={hospital.hospitalId}>
+                      {hospital.hospitalName}
+                    </option>
+                  ))}
+                </select>
+              )}
+              {!hospitalsLoading && hospitals.length === 0 && (
+                <p className="mt-2 text-sm text-red-600">No hospitals available</p>
+              )}
+            </div>
+          )}
 
-          {/* Tab Content */}
-          {activeTab === 'overview' && (
-            <>
+          {/* Dashboard Content */}
+          <>
               {/* Stats Overview */}
-              <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 ${user?.role === 'SystemManager' ? 'xl:grid-cols-6' : 'xl:grid-cols-5'} gap-6 mb-8`}>
-            {user?.role === 'SystemManager' && (
+              <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 ${user?.role === 'SystemManager' && !selectedHospitalId ? 'xl:grid-cols-6' : 'xl:grid-cols-5'} gap-6 mb-8`}>
+            {user?.role === 'SystemManager' && !selectedHospitalId && (
               <div className="bg-white overflow-hidden shadow rounded-lg">
                 <div className="p-5">
                   <div className="flex items-center">
@@ -220,7 +314,7 @@ export default function Dashboard() {
               </div>
             )}
 
-            {user?.role === 'HospitalManager' && (
+            {(user?.role === 'HospitalManager' || (user?.role === 'SystemManager' && selectedHospitalId)) && (
               <div className="bg-white overflow-hidden shadow rounded-lg">
                 <div className="p-5">
                   <div className="flex items-center">
@@ -230,7 +324,7 @@ export default function Dashboard() {
                     <div className="ml-5 w-0 flex-1">
                       <dl>
                         <dt className="text-sm font-medium text-gray-500 truncate">Doctors</dt>
-                        <dd className="text-lg font-medium text-gray-900">{stats.totalDoctors}</dd>
+                        <dd className="text-lg font-medium text-gray-900">{stats.totalDoctors || doctorsData.length}</dd>
                       </dl>
                     </div>
                   </div>
@@ -325,7 +419,9 @@ export default function Dashboard() {
             <div className="bg-white shadow rounded-lg">
               <div className="px-4 py-5 sm:p-6">
                 <h3 className="text-lg font-medium text-gray-900 mb-4">
-                  {user?.role === 'HospitalManager' ? 'Doctor TES Performance' : 'Hospital TES Performance Comparison'}
+                  {(user?.role === 'HospitalManager' || (user?.role === 'SystemManager' && selectedHospitalId)) 
+                    ? 'Doctor TES Performance' 
+                    : 'Hospital TES Performance Comparison'}
                 </h3>
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={tesData}>
@@ -343,7 +439,9 @@ export default function Dashboard() {
             <div className="bg-white shadow rounded-lg">
               <div className="px-4 py-5 sm:p-6">
                 <h3 className="text-lg font-medium text-gray-900 mb-4">
-                  {user?.role === 'HospitalManager' ? 'Hospital Patient Volume' : 'Patient Volume Trends'}
+                  {(user?.role === 'HospitalManager' || (user?.role === 'SystemManager' && selectedHospitalId))
+                    ? 'Hospital Patient Volume' 
+                    : 'Patient Volume Trends'}
                 </h3>
                 <ResponsiveContainer width="100%" height={300}>
                   <LineChart data={volumeData}>
@@ -389,13 +487,17 @@ export default function Dashboard() {
             <div className="bg-white shadow rounded-lg">
               <div className="px-4 py-5 sm:p-6">
                 <h3 className="text-lg font-medium text-gray-900 mb-4">
-                  {user?.role === 'HospitalManager' ? 'Hospital Performance Overview' : 'Hospital Performance Rankings'}
+                  {(user?.role === 'HospitalManager' || (user?.role === 'SystemManager' && selectedHospitalId))
+                    ? 'Doctor Performance Overview' 
+                    : 'Hospital Performance Rankings'}
                 </h3>
                 <div className="space-y-4">
-                  {hospitalPerformance.map((hospital, index) => (
-                    <div key={hospital.hospitalId} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  {(user?.role === 'SystemManager' && selectedHospitalId ? doctorsData : hospitalPerformance).map((item: any, index: number) => {
+                    const isDoctorView = user?.role === 'SystemManager' && selectedHospitalId;
+                    return (
+                    <div key={isDoctorView ? item.doctorId : item.hospitalId} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                       <div className="flex items-center">
-                        {user?.role === 'SystemManager' && (
+                        {user?.role === 'SystemManager' && !selectedHospitalId && (
                           <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold ${
                             index === 0 ? 'bg-yellow-500' : 
                             index === 1 ? 'bg-gray-400' : 
@@ -404,17 +506,24 @@ export default function Dashboard() {
                             {index + 1}
                           </div>
                         )}
-                        <div className={user?.role === 'SystemManager' ? 'ml-3' : ''}>
-                          <p className="font-medium text-gray-900">{hospital.hospitalName}</p>
-                          <p className="text-sm text-gray-500">TES: {hospital.averageTES}%</p>
+                        <div className={user?.role === 'SystemManager' && !selectedHospitalId ? 'ml-3' : ''}>
+                          <p className="font-medium text-gray-900">
+                            {isDoctorView ? item.doctorName : item.hospitalName}
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            TES: {isDoctorView ? (item.averageTreatmentEvaluationScore || 0).toFixed(1) : item.averageTES}%
+                          </p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="font-semibold text-gray-900">{hospital.performanceIndex}%</p>
+                        <p className="font-semibold text-gray-900">
+                          {isDoctorView ? (item.averageTreatmentEvaluationScore || 0).toFixed(1) : item.performanceIndex}%
+                        </p>
                         <p className="text-sm text-gray-500">Performance</p>
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -424,7 +533,9 @@ export default function Dashboard() {
           <div className="bg-white shadow rounded-lg">
             <div className="px-4 py-5 sm:p-6">
               <h3 className="text-lg font-medium text-gray-900 mb-4">
-                {user?.role === 'HospitalManager' ? 'Hospital Performance Insights' : 'System Performance Insights & Recommendations'}
+                {(user?.role === 'HospitalManager' || (user?.role === 'SystemManager' && selectedHospitalId))
+                  ? 'Hospital Performance Insights' 
+                  : 'System Performance Insights & Recommendations'}
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
@@ -433,7 +544,7 @@ export default function Dashboard() {
                     <h4 className="font-medium text-red-800">Critical Alert</h4>
                   </div>
                   <p className="text-sm text-red-700">
-                    {user?.role === 'HospitalManager' 
+                    {(user?.role === 'HospitalManager' || (user?.role === 'SystemManager' && selectedHospitalId))
                       ? `${stats.alertsCount} doctors below TES threshold (70%)`
                       : `${stats.alertsCount} doctors across system below TES threshold (70%)`
                     }
@@ -446,7 +557,7 @@ export default function Dashboard() {
                     <h4 className="font-medium text-yellow-800">Improvement Needed</h4>
                   </div>
                   <p className="text-sm text-yellow-700">
-                    {user?.role === 'HospitalManager' 
+                    {(user?.role === 'HospitalManager' || (user?.role === 'SystemManager' && selectedHospitalId))
                       ? 'Consider additional training for doctors with low TES scores'
                       : 'Some hospitals need interoperability training'
                     }
@@ -459,7 +570,7 @@ export default function Dashboard() {
                     <h4 className="font-medium text-green-800">Good Performance</h4>
                   </div>
                   <p className="text-sm text-green-700">
-                    {user?.role === 'HospitalManager' 
+                    {(user?.role === 'HospitalManager' || (user?.role === 'SystemManager' && selectedHospitalId))
                       ? `Hospital performance index: ${stats.performanceIndex}%`
                       : 'Overall system health is excellent'
                     }
@@ -468,16 +579,7 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
-            </>
-          )}
-
-          {/* Data Requests Tab */}
-          {activeTab === 'data-requests' && (
-            <div className="space-y-6">
-              {/* Data Request Manager */}
-              <DataRequestManager userRole={user?.role || ''} />
-            </div>
-          )}
+          </>
         </div>
       </Layout>
     </ProtectedRoute>

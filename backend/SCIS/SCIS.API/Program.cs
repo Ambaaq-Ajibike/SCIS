@@ -40,18 +40,23 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// CORS Configuration - Fixed to allow specific origins and credentials
+// CORS Configuration - More flexible for development
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins("http://localhost:3000", "https://localhost:3000")
+        policy.WithOrigins(
+                "http://localhost:3000", 
+                "https://localhost:3000",
+                "http://127.0.0.1:3000",
+                "https://127.0.0.1:3000"
+              )
               .AllowAnyMethod()
               .AllowAnyHeader()
               .AllowCredentials(); // This is important for JWT tokens
     });
     
-    // Keep the AllowAll policy for development/testing
+    // More permissive policy for development
     options.AddPolicy("AllowAll", policy =>
     {
         policy.AllowAnyOrigin()
@@ -109,7 +114,15 @@ if (app.Environment.IsDevelopment())
 }
 
 // IMPORTANT: CORS must be before UseHttpsRedirection to prevent preflight redirect issues
-app.UseCors("AllowFrontend");
+// Use more permissive CORS policy for development
+if (app.Environment.IsDevelopment())
+{
+    app.UseCors("AllowAll");
+}
+else
+{
+    app.UseCors("AllowFrontend");
+}
 
 // Only use HTTPS redirection in production or when explicitly configured
 if (!app.Environment.IsDevelopment())
@@ -125,7 +138,7 @@ using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<SCISDbContext>();
     context.Database.EnsureCreated();
-    await SCIS.Infrastructure.Data.SeedData.SeedAsync(context);
+    //await SCIS.Infrastructure.Data.SeedData.SeedAsync(context);
 }
 
 app.Run();

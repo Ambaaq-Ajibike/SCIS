@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import Layout from '@/components/Layout';
+import { systemManagerService } from '@/lib/api';
 
 interface Hospital {
   id: string;
@@ -50,81 +51,29 @@ export default function HospitalsPage() {
 
   const fetchHospitals = async () => {
     try {
-      // Mock data - in real app, fetch from API
-      const mockHospitals: Hospital[] = [
-        {
-          id: '1',
-          name: 'City General Hospital',
-          address: '123 Main St, City, State 12345',
-          phoneNumber: '+1-555-0100',
-          email: 'info@citygeneral.com',
-          isActive: true,
-          createdAt: '2024-01-01',
-          totalPatients: 1250,
-          averageTES: 85.2,
-          performanceIndex: 92.1,
-          interoperabilityRate: 95.5,
-          alertsCount: 0,
-        },
-        {
-          id: '2',
-          name: 'Metro Medical Center',
-          address: '456 Oak Ave, Metro, State 12346',
-          phoneNumber: '+1-555-0200',
-          email: 'contact@metromedical.com',
-          isActive: true,
-          createdAt: '2024-01-05',
-          totalPatients: 980,
-          averageTES: 82.7,
-          performanceIndex: 88.9,
-          interoperabilityRate: 92.3,
-          alertsCount: 1,
-        },
-        {
-          id: '3',
-          name: 'Regional Health Center',
-          address: '789 Pine St, Regional, State 12347',
-          phoneNumber: '+1-555-0300',
-          email: 'admin@regionalhealth.com',
-          isActive: true,
-          createdAt: '2024-01-10',
-          totalPatients: 750,
-          averageTES: 79.1,
-          performanceIndex: 84.3,
-          interoperabilityRate: 89.7,
-          alertsCount: 2,
-        },
-        {
-          id: '4',
-          name: 'Community Hospital',
-          address: '321 Elm St, Community, State 12348',
-          phoneNumber: '+1-555-0400',
-          email: 'info@communityhospital.com',
-          isActive: false,
-          createdAt: '2024-01-15',
-          totalPatients: 450,
-          averageTES: 76.8,
-          performanceIndex: 81.2,
-          interoperabilityRate: 87.1,
-          alertsCount: 3,
-        },
-        {
-          id: '5',
-          name: 'University Medical Center',
-          address: '654 Campus Dr, University, State 12349',
-          phoneNumber: '+1-555-0500',
-          email: 'contact@universitymedical.com',
-          isActive: true,
-          createdAt: '2024-01-20',
-          totalPatients: 1100,
-          averageTES: 74.5,
-          performanceIndex: 78.9,
-          interoperabilityRate: 85.2,
-          alertsCount: 1,
-        },
-      ];
+      setLoading(true);
+      // Fetch hospitals from API with analytics
+      const hospitalAnalytics = await systemManagerService.getAllHospitals();
+      
+      // Map the analytics data to the Hospital interface
+      const hospitals: Hospital[] = hospitalAnalytics.map((h: any) => ({
+        id: h.hospitalId,
+        name: h.hospitalName,
+        address: h.address || '',
+        phoneNumber: h.phoneNumber || '',
+        email: h.email || '',
+        isActive: h.isActive,
+        createdAt: h.createdAt,
+        totalPatients: h.totalPatients || 0,
+        averageTES: h.averageTreatmentEvaluationScore || 0,
+        performanceIndex: h.averageTreatmentEvaluationScore || 0, // Using TES as performance index for now
+        interoperabilityRate: h.approvedDataRequests > 0 && h.totalDataRequests > 0 
+          ? (h.approvedDataRequests / h.totalDataRequests) * 100 
+          : 0,
+        alertsCount: 0, // Calculate alerts based on doctors below threshold if needed
+      }));
 
-      setHospitals(mockHospitals);
+      setHospitals(hospitals);
       setLoading(false);
     } catch (error) {
       console.error('Error fetching hospitals:', error);
@@ -192,10 +141,6 @@ export default function HospitalsPage() {
                 <h1 className="text-2xl font-bold text-gray-900">Hospitals</h1>
                 <p className="text-gray-600">Manage healthcare institutions and performance</p>
               </div>
-              <button className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Hospital
-              </button>
             </div>
           </div>
 
@@ -284,7 +229,7 @@ export default function HospitalsPage() {
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-2">
+                    {/* <div className="flex items-center space-x-2">
                       <button className="text-gray-400 hover:text-gray-600">
                         <Eye className="h-4 w-4" />
                       </button>
@@ -294,7 +239,7 @@ export default function HospitalsPage() {
                       <button className="text-gray-400 hover:text-gray-600">
                         <Settings className="h-4 w-4" />
                       </button>
-                    </div>
+                    </div> */}
                   </div>
 
                   <div className="space-y-3">
