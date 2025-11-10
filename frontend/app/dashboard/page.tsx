@@ -116,7 +116,15 @@ export default function Dashboard() {
     try {
       setLoading(true);
       const doctors = await systemManagerService.getDoctorsByHospital(hospitalId);
-      setDoctorsData(doctors);
+      // Normalize doctor data field names
+      const normalizedDoctors = doctors.map((d: any) => ({
+        ...d,
+        doctorId: d.doctorId || d.id,
+        doctorName: d.doctorName || d.username || d.firstName || 'Unknown',
+        averageTreatmentEvaluationScore: d.averageTreatmentEvaluationScore || d.averageTES || 0,
+        averageTES: d.averageTES || d.averageTreatmentEvaluationScore || 0
+      }));
+      setDoctorsData(normalizedDoctors);
       
       // Update stats to show hospital-specific data
       // Try to find hospital by different possible ID formats
@@ -190,8 +198,18 @@ export default function Dashboard() {
         percentage: s.percentage
       })));
 
-      // Set doctors data
-      setDoctorsData(doctors);
+      // Set doctors data - normalize field names to handle both averageTES and averageTreatmentEvaluationScore
+      const normalizedDoctors = doctors.map((d: any) => {
+        const tes = d.averageTreatmentEvaluationScore ?? d.averageTES ?? 0;
+        return {
+          ...d,
+          doctorId: d.doctorId || d.id,
+          doctorName: d.doctorName || d.username || d.firstName || 'Unknown',
+          averageTreatmentEvaluationScore: tes,
+          averageTES: tes
+        };
+      });
+      setDoctorsData(normalizedDoctors);
 
       setLoading(false);
     } catch (error) {
@@ -202,11 +220,27 @@ export default function Dashboard() {
 
   // Prepare TES data based on user role and hospital filter
   const tesData = (user?.role === 'HospitalManager' || (user?.role === 'SystemManager' && selectedHospitalId))
-    ? doctorsData.map(d => ({
-        name: d.doctorName?.split(' ')[0] || d.doctorName || 'Doctor', // Use first name or first part of username
-        tes: d.averageTreatmentEvaluationScore || 0,
-        performance: d.averageTreatmentEvaluationScore || 0 // For doctors, use TES as performance
-      }))
+    ? doctorsData
+        .map(d => {
+          // Get TES value from either field name
+          const tes = d.averageTreatmentEvaluationScore ?? d.averageTES ?? 0;
+          const doctorName = d.doctorName || d.username || d.firstName || 'Doctor';
+          return {
+            name: doctorName.split(' ')[0], // Use first name or first part of username
+            tes: Number(tes) || 0,
+            performance: Number(tes) || 0 // For doctors, use TES as performance
+          };
+        })
+        .filter(d => {
+          // Show doctors with TES > 0, or if all doctors have 0 TES, show them all
+          const hasAnyTES = doctorsData.some(doc => {
+            const docTES = doc.averageTreatmentEvaluationScore ?? doc.averageTES ?? 0;
+            return Number(docTES) > 0;
+          });
+          // If any doctor has TES > 0, only show those with TES > 0
+          // Otherwise, show all doctors (they all have 0 TES)
+          return hasAnyTES ? d.tes > 0 : true;
+        })
     : hospitalPerformance.map(h => ({
         name: h.hospitalName.split(' ')[0],
         tes: h.averageTES,
@@ -424,13 +458,22 @@ export default function Dashboard() {
                     : 'Hospital TES Performance Comparison'}
                 </h3>
                 <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={tesData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip />
-                    <Bar dataKey="tes" fill="#3b82f6" />
-                  </BarChart>
+                  {tesData.length > 0 ? (
+                    <BarChart data={tesData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" />
+                      <YAxis domain={[0, 100]} />
+                      <Tooltip formatter={(value: any) => `${value}%`} />
+                      <Bar dataKey="tes" fill="#3b82f6" />
+                    </BarChart>
+                  ) : (
+                    <div className="flex items-center justify-center h-full text-gray-500">
+                      <div className="text-center">
+                        <p className="text-sm">No TES data available</p>
+                        <p className="text-xs mt-1">Doctors will appear here after receiving feedback</p>
+                      </div>
+                    </div>
+                  )}
                 </ResponsiveContainer>
               </div>
             </div>

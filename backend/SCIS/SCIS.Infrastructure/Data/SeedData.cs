@@ -20,10 +20,10 @@ public static class SeedData
         await context.SaveChangesAsync();
 
         // Create hospitals
-        var hospital1 = new Hospital { Name = "City General Hospital", Address = "123 Main St, City", PhoneNumber = "555-0101", Email = "info@citygeneral.com", LicenseNumber = "HOSP001" };
-        var hospital2 = new Hospital { Name = "Metro Medical Center", Address = "456 Health Ave, Metro", PhoneNumber = "555-0102", Email = "contact@metromedical.com", LicenseNumber = "HOSP002" };
-        var hospital3 = new Hospital { Name = "Regional Health Center", Address = "789 Care Blvd, Region", PhoneNumber = "555-0103", Email = "admin@regionalhealth.com", LicenseNumber = "HOSP003" };
-        var hospital4 = new Hospital { Name = "Community Hospital", Address = "321 Wellness St, Community", PhoneNumber = "555-0104", Email = "support@communityhospital.com", LicenseNumber = "HOSP004" };
+        var hospital1 = new Hospital { Name = "City General Hospital", Address = "123 Main St, City", PhoneNumber = "555-0101", Email = "ajibikeabdulqayyum04@gmail.com", LicenseNumber = "HOSP001" };
+        var hospital2 = new Hospital { Name = "Metro Medical Center", Address = "456 Health Ave, Metro", PhoneNumber = "555-0102", Email = "ajibikeambaaq@gmail.com", LicenseNumber = "HOSP002" };
+        var hospital3 = new Hospital { Name = "Regional Health Center", Address = "789 Care Blvd, Region", PhoneNumber = "555-0103", Email = "ambaaqcursor@gmail.com", LicenseNumber = "HOSP003" };
+        var hospital4 = new Hospital { Name = "Community Hospital", Address = "321 Wellness St, Community", PhoneNumber = "555-0104", Email = "amsanigeriatajneed@gmail.com", LicenseNumber = "HOSP004" };
         var hospital5 = new Hospital { Name = "University Medical Center", Address = "654 Academic Way, University", PhoneNumber = "555-0105", Email = "info@universitymedical.com", LicenseNumber = "HOSP005" };
 
         context.Hospitals.AddRange(hospital1, hospital2, hospital3, hospital4, hospital5);
@@ -33,10 +33,10 @@ public static class SeedData
         await SeedDataRequestEndpoints(context, hospital1, hospital2, hospital3, hospital4, hospital5);
 
         // Create users
-        var manager1 = new User { Username = "manager1", Email = "manager1@citygeneral.com", PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"), Role = "HospitalManager", HospitalId = hospital1.Id };
-        var manager2 = new User { Username = "manager2", Email = "manager2@metromedical.com", PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"), Role = "HospitalManager", HospitalId = hospital2.Id };
-        var manager3 = new User { Username = "manager3", Email = "manager3@regionalhealth.com", PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"), Role = "HospitalManager", HospitalId = hospital3.Id };
-        var manager4 = new User { Username = "manager4", Email = "manager4@communityhospital.com", PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"), Role = "HospitalManager", HospitalId = hospital4.Id };
+        var manager1 = new User { Username = "manager1", Email = "ajibikeabdulqayyum04@gmail.com", PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"), Role = "HospitalManager", HospitalId = hospital1.Id };
+        var manager2 = new User { Username = "manager2", Email = "ajibikeambaaq@gmail.com", PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"), Role = "HospitalManager", HospitalId = hospital2.Id };
+        var manager3 = new User { Username = "manager3", Email = "ambaaqcursor@gmail.com", PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"), Role = "HospitalManager", HospitalId = hospital3.Id };
+        var manager4 = new User { Username = "manager4", Email = "amsanigeriatajneed@gmail.com", PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"), Role = "HospitalManager", HospitalId = hospital4.Id };
         var manager5 = new User { Username = "manager5", Email = "manager5@universitymedical.com", PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"), Role = "HospitalManager", HospitalId = hospital5.Id };
 
         var doctor1 = new User { Username = "dr_sarah_johnson", Email = "sarah.johnson@citygeneral.com", PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"), Role = "Doctor", HospitalId = hospital1.Id };
@@ -58,11 +58,11 @@ public static class SeedData
         await context.SaveChangesAsync();
 
         // Create patients
-        var patient1 = new Patient { FirstName = "John", LastName = "Doe", PatientId = "PAT001", DateOfBirth = DateTime.SpecifyKind(new DateTime(1985, 5, 15), DateTimeKind.Utc), Gender = "Male", PhoneNumber = "555-1001", Email = "john.doe@email.com", PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"), HospitalId = hospital1.Id, IsSignupCompleted = true };
-        var patient2 = new Patient { FirstName = "Jane", LastName = "Smith", PatientId = "PAT002", DateOfBirth = DateTime.SpecifyKind(new DateTime(1990, 8, 22), DateTimeKind.Utc), Gender = "Female", PhoneNumber = "555-1002", Email = "jane.smith@email.com", PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"), HospitalId = hospital2.Id, IsSignupCompleted = true };
-        var patient3 = new Patient { FirstName = "Mike", LastName = "Johnson", PatientId = "PAT003", DateOfBirth = DateTime.SpecifyKind(new DateTime(1978, 12, 3), DateTimeKind.Utc), Gender = "Male", PhoneNumber = "555-1003", Email = "mike.johnson@email.com", PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"), HospitalId = hospital3.Id, IsSignupCompleted = true };
-        var patient4 = new Patient { FirstName = "Sarah", LastName = "Williams", PatientId = "PAT004", DateOfBirth = DateTime.SpecifyKind(new DateTime(1992, 3, 18), DateTimeKind.Utc), Gender = "Female", PhoneNumber = "555-1004", Email = "sarah.williams@email.com", PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"), HospitalId = hospital4.Id, IsSignupCompleted = true };
-        var patient5 = new Patient { FirstName = "David", LastName = "Brown", PatientId = "PAT005", DateOfBirth = DateTime.SpecifyKind(new DateTime(1988, 7, 9), DateTimeKind.Utc), Gender = "Male", PhoneNumber = "555-1005", Email = "david.brown@email.com", PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"), HospitalId = hospital5.Id, IsSignupCompleted = true };
+        var patient1 = new Patient { FirstName = "John", LastName = "Doe", PatientId = "47224830", DateOfBirth = DateTime.SpecifyKind(new DateTime(1985, 5, 15), DateTimeKind.Utc), Gender = "Male", PhoneNumber = "555-1001", Email = "john.doe@email.com", PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"), HospitalId = hospital1.Id, IsSignupCompleted = true };
+        var patient2 = new Patient { FirstName = "Jane", LastName = "Smith", PatientId = "47224831", DateOfBirth = DateTime.SpecifyKind(new DateTime(1990, 8, 22), DateTimeKind.Utc), Gender = "Female", PhoneNumber = "555-1002", Email = "jane.smith@email.com", PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"), HospitalId = hospital2.Id, IsSignupCompleted = true };
+        var patient3 = new Patient { FirstName = "Mike", LastName = "Johnson", PatientId = "47224832", DateOfBirth = DateTime.SpecifyKind(new DateTime(1978, 12, 3), DateTimeKind.Utc), Gender = "Male", PhoneNumber = "555-1003", Email = "mike.johnson@email.com", PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"), HospitalId = hospital3.Id, IsSignupCompleted = true };
+        var patient4 = new Patient { FirstName = "Sarah", LastName = "Williams", PatientId = "47224833", DateOfBirth = DateTime.SpecifyKind(new DateTime(1992, 3, 18), DateTimeKind.Utc), Gender = "Female", PhoneNumber = "555-1004", Email = "sarah.williams@email.com", PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"), HospitalId = hospital4.Id, IsSignupCompleted = true };
+        var patient5 = new Patient { FirstName = "David", LastName = "Brown", PatientId = "47224834", DateOfBirth = DateTime.SpecifyKind(new DateTime(1988, 7, 9), DateTimeKind.Utc), Gender = "Male", PhoneNumber = "555-1005", Email = "david.brown@email.com", PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"), HospitalId = hospital5.Id, IsSignupCompleted = true };
 
         context.Patients.AddRange(patient1, patient2, patient3, patient4, patient5);
         await context.SaveChangesAsync();

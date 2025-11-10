@@ -378,27 +378,21 @@ public class DashboardController(SCISDbContext _context) : ControllerBase
         var doctors = await _context.Users
             .Where(u => u.Role == "Doctor" && u.IsActive)
             .Include(u => u.Hospital)
-            .Select(u => new
-            {
-                u.Id,
-                u.Username,
-                u.Email,
-                HospitalName = u.Hospital != null ? u.Hospital.Name : "Unknown",
-                AverageTES = u.PatientFeedbacks.Any() ? 
-                    u.PatientFeedbacks.Average(pf => pf.TreatmentEvaluationScore) : 0,
-                FeedbackCount = u.PatientFeedbacks.Count
-            })
+            .Include(u => u.PatientFeedbacks)
             .ToListAsync();
 
-        return doctors.Select(d => new
+        var doctorList = doctors.Select(u => new
         {
-            doctorId = d.Id,
-            doctorName = d.Username,
-            email = d.Email,
-            hospitalName = d.HospitalName,
-            averageTES = Math.Round(d.AverageTES, 1),
-            feedbackCount = d.FeedbackCount
+            doctorId = u.Id,
+            doctorName = u.Username,
+            email = u.Email,
+            hospitalName = u.Hospital != null ? u.Hospital.Name : "Unknown",
+            averageTES = u.PatientFeedbacks.Any() ? 
+                Math.Round(u.PatientFeedbacks.Average(pf => pf.TreatmentEvaluationScore), 1) : 0,
+            feedbackCount = u.PatientFeedbacks.Count
         }).Cast<object>().ToList();
+
+        return doctorList;
     }
 
     private async Task<List<object>> GetHospitalDoctors(Guid hospitalId)
@@ -406,27 +400,21 @@ public class DashboardController(SCISDbContext _context) : ControllerBase
         var doctors = await _context.Users
             .Where(u => u.Role == "Doctor" && u.HospitalId == hospitalId && u.IsActive)
             .Include(u => u.Hospital)
-            .Select(u => new
-            {
-                u.Id,
-                u.Username,
-                u.Email,
-                HospitalName = u.Hospital != null ? u.Hospital.Name : "Unknown",
-                AverageTES = u.PatientFeedbacks.Any() ? 
-                    u.PatientFeedbacks.Average(pf => pf.TreatmentEvaluationScore) : 0,
-                FeedbackCount = u.PatientFeedbacks.Count
-            })
+            .Include(u => u.PatientFeedbacks)
             .ToListAsync();
 
-        return doctors.Select(d => new
+        var doctorList = doctors.Select(u => new
         {
-            doctorId = d.Id,
-            doctorName = d.Username,
-            email = d.Email,
-            hospitalName = d.HospitalName,
-            averageTES = Math.Round(d.AverageTES, 1),
-            feedbackCount = d.FeedbackCount
+            doctorId = u.Id,
+            doctorName = u.Username,
+            email = u.Email,
+            hospitalName = u.Hospital != null ? u.Hospital.Name : "Unknown",
+            averageTES = u.PatientFeedbacks.Any() ? 
+                Math.Round(u.PatientFeedbacks.Average(pf => pf.TreatmentEvaluationScore), 1) : 0,
+            feedbackCount = u.PatientFeedbacks.Count
         }).Cast<object>().ToList();
+
+        return doctorList;
     }
 
     private async Task<List<object>> GetAllPatients()
