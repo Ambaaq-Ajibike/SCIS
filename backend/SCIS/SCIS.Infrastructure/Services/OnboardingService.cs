@@ -11,15 +11,18 @@ public class OnboardingService : IOnboardingService
 {
     private readonly SCISDbContext _context;
     private readonly IAuthService _authService;
+    private readonly IEmailService _emailService;
     private readonly ILogger<OnboardingService> _logger;
 
     public OnboardingService(
         SCISDbContext context,
         IAuthService authService,
+        IEmailService emailService,
         ILogger<OnboardingService> logger)
     {
         _context = context;
         _authService = authService;
+        _emailService = emailService;
         _logger = logger;
     }
 
@@ -51,13 +54,9 @@ public class OnboardingService : IOnboardingService
                 Name = dto.HospitalName,
                 Address = dto.Address,
                 PhoneNumber = dto.PhoneNumber,
-                Email = dto.Email,
                 LicenseNumber = dto.LicenseNumber,
                 IsActive = false,
                 IsApproved = false,
-                ContactPersonName = dto.ContactPersonName,
-                ContactPersonEmail = dto.ContactPersonEmail,
-                ContactPersonPhone = dto.ContactPersonPhone,
                 VerificationDocuments = dto.VerificationDocuments,
                 VerificationNotes = dto.VerificationNotes,
                 CreatedAt = DateTime.UtcNow
@@ -174,7 +173,9 @@ public class OnboardingService : IOnboardingService
     {
         try
         {
-            var hospital = await _context.Hospitals.FindAsync(hospitalId);
+            var hospital = await _context.Hospitals
+                .FirstOrDefaultAsync(h => h.Id == hospitalId);
+            
             if (hospital == null)
             {
                 throw new ArgumentException("Hospital not found");
@@ -194,6 +195,52 @@ public class OnboardingService : IOnboardingService
 
             _logger.LogInformation("Hospital {HospitalId} approval status changed to {IsApproved} by {UserId}", 
                 hospitalId, isApproved, approvedByUserId);
+
+            // Send email notification to hospital manager if approved
+            if (isApproved)
+            {
+                // Query manager separately to ensure it's loaded correctly
+                var manager = await _context.Users
+                    .FirstOrDefaultAsync(u => u.HospitalId == hospitalId && u.Role == "HospitalManager" && u.IsActive);
+                
+                if (manager != null)
+                {
+                    try
+                    {
+                        _logger.LogInformation("Attempting to send approval email to {ManagerEmail} for hospital {HospitalName}", 
+                            manager.Email, hospital.Name);
+                        
+                        var emailSent = await _emailService.SendHospitalApprovalEmailAsync(
+                            manager.Email,
+                            manager.Username,
+                            hospital.Name,
+                            true,
+                            notes
+                        );
+                        
+                        if (emailSent)
+                        {
+                            _logger.LogInformation("Approval email successfully sent to {ManagerEmail} for hospital {HospitalName}", 
+                            manager.Email, hospital.Name);
+                        }
+                        else
+                        {
+                            _logger.LogWarning("Failed to send approval email to {ManagerEmail} for hospital {HospitalName} - EmailService returned false", 
+                                manager.Email, hospital.Name);
+                        }
+                    }
+                    catch (Exception emailEx)
+                    {
+                        _logger.LogError(emailEx, "Exception occurred while sending approval email to {ManagerEmail} for hospital {HospitalName}. Error: {ErrorMessage}", 
+                            manager.Email, hospital.Name, emailEx.Message);
+                        // Don't throw - email failure shouldn't prevent approval
+                    }
+                }
+                else
+                {
+                    _logger.LogWarning("No active HospitalManager found for hospital {HospitalId} - cannot send approval email", hospitalId);
+                }
+            }
 
             return true;
         }
@@ -219,15 +266,11 @@ public class OnboardingService : IOnboardingService
                 Name = h.Name,
                 Address = h.Address,
                 PhoneNumber = h.PhoneNumber ?? "",
-                Email = h.Email ?? "",
                 LicenseNumber = h.LicenseNumber,
                 IsActive = h.IsActive,
                 IsApproved = h.IsApproved,
                 CreatedAt = h.CreatedAt,
                 ApprovedAt = h.ApprovedAt,
-                ContactPersonName = h.ContactPersonName,
-                ContactPersonEmail = h.ContactPersonEmail,
-                ContactPersonPhone = h.ContactPersonPhone,
                 VerificationDocuments = h.VerificationDocuments,
                 VerificationNotes = h.VerificationNotes
             }).ToList();
@@ -253,15 +296,11 @@ public class OnboardingService : IOnboardingService
                 Name = hospital.Name,
                 Address = hospital.Address,
                 PhoneNumber = hospital.PhoneNumber ?? "",
-                Email = hospital.Email ?? "",
                 LicenseNumber = hospital.LicenseNumber,
                 IsActive = hospital.IsActive,
                 IsApproved = hospital.IsApproved,
                 CreatedAt = hospital.CreatedAt,
                 ApprovedAt = hospital.ApprovedAt,
-                ContactPersonName = hospital.ContactPersonName,
-                ContactPersonEmail = hospital.ContactPersonEmail,
-                ContactPersonPhone = hospital.ContactPersonPhone,
                 VerificationDocuments = hospital.VerificationDocuments,
                 VerificationNotes = hospital.VerificationNotes
             };

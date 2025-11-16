@@ -28,6 +28,8 @@ interface DataRequestEndpoint {
   lastValidationError?: string;
   allowedRoles?: string;
   hospitalName?: string;
+  apiKey?: string;
+  authToken?: string;
 }
 
 interface DataRequestEndpointManagerProps {

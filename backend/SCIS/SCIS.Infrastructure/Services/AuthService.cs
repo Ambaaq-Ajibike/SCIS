@@ -23,6 +23,15 @@ public class AuthService(SCISDbContext _context, IConfiguration _configuration) 
         if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
             return null;
 
+        // Check if hospital is approved (for non-system managers)
+        if (user.HospitalId.HasValue && user.Role != "SystemManager")
+        {
+            if (user.Hospital == null || !user.Hospital.IsApproved || !user.Hospital.IsActive)
+            {
+                throw new InvalidOperationException("Your hospital registration is pending approval. Please wait for the system administrator to approve your registration. You will receive an email notification once approved.");
+            }
+        }
+
         var token = await GenerateTokenAsync(user.Id, user.Role, user.HospitalId);
         var refreshToken = Guid.NewGuid().ToString();
 

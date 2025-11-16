@@ -6,7 +6,6 @@ import {
   FileText, 
   Activity, 
   Pill, 
-  Heart, 
   AlertTriangle,
   Calendar,
   Stethoscope

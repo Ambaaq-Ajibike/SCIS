@@ -27,11 +27,7 @@ export default function EndpointConfig({
   onValidationComplete,
   disabled = false
 }: EndpointConfigProps) {
-  const [isValidating, setIsValidating] = useState(false);
-
-  const handleValidationStart = () => {
-    setIsValidating(true);
-  };
+  const [, setIsValidating] = useState(false);
 
   const handleValidationComplete = (result: EndpointValidationDto) => {
     setIsValidating(false);

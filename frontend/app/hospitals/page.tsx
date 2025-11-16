@@ -2,12 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { 
-  Plus, 
-  Search, 
-  Filter, 
-  Eye, 
-  Edit, 
-  Settings, 
+  Search,
+  Filter,
   Building2, 
   Phone, 
   Mail, 
@@ -229,17 +225,6 @@ export default function HospitalsPage() {
                         </div>
                       </div>
                     </div>
-                    {/* <div className="flex items-center space-x-2">
-                      <button className="text-gray-400 hover:text-gray-600">
-                        <Eye className="h-4 w-4" />
-                      </button>
-                      <button className="text-gray-400 hover:text-gray-600">
-                        <Edit className="h-4 w-4" />
-                      </button>
-                      <button className="text-gray-400 hover:text-gray-600">
-                        <Settings className="h-4 w-4" />
-                      </button>
-                    </div> */}
                   </div>
 
                   <div className="space-y-3">

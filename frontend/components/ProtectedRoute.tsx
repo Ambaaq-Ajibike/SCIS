@@ -2,8 +2,9 @@
 
 import { useAuth } from '@/lib/auth';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
-import { Loader2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Loader2, AlertCircle } from 'lucide-react';
+import { onboardingService } from '@/lib/api';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -13,6 +14,8 @@ interface ProtectedRouteProps {
 export default function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
   const { isAuthenticated, user, isLoading } = useAuth();
   const router = useRouter();
+  const [checkingApproval, setCheckingApproval] = useState(false);
+  const [isApproved, setIsApproved] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -20,7 +23,39 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
     }
   }, [isAuthenticated, isLoading, router]);
 
-  if (isLoading) {
+  // Check hospital approval status for hospital users
+  useEffect(() => {
+    const checkHospitalApproval = async () => {
+      if (!isLoading && isAuthenticated && user?.hospitalId && user.role !== 'SystemManager') {
+        setCheckingApproval(true);
+        try {
+          const hospital = await onboardingService.getHospital(user.hospitalId);
+          setIsApproved(hospital.isApproved && hospital.isActive);
+          
+          // If hospital is not approved, redirect after a moment
+          if (!hospital.isApproved || !hospital.isActive) {
+            setTimeout(() => {
+              router.push('/login');
+            }, 3000);
+          }
+        } catch (error) {
+          console.error('Error checking hospital approval:', error);
+          setIsApproved(false);
+        } finally {
+          setCheckingApproval(false);
+        }
+      } else if (user?.role === 'SystemManager') {
+        // System managers don't need hospital approval
+        setIsApproved(true);
+      }
+    };
+
+    if (!isLoading && isAuthenticated) {
+      checkHospitalApproval();
+    }
+  }, [isLoading, isAuthenticated, user, router]);
+
+  if (isLoading || checkingApproval) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary-600" />
@@ -41,6 +76,36 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
         </div>
       </div>
     );
+  }
+
+  // Check if hospital is approved (only for non-system managers with hospital)
+  if (user?.hospitalId && user.role !== 'SystemManager') {
+    if (isApproved === false) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+          <div className="max-w-md w-full bg-white shadow-lg rounded-lg p-8 text-center">
+            <AlertCircle className="h-16 w-16 text-yellow-500 mx-auto mb-4" />
+            <h1 className="text-2xl font-bold text-gray-900 mb-4">Hospital Not Approved</h1>
+            <p className="text-gray-600 mb-6">
+              Your hospital registration is pending approval from the system administrator.
+              You will be redirected to the login page shortly.
+            </p>
+            <p className="text-sm text-gray-500">
+              Please contact the system administrator for more information.
+            </p>
+          </div>
+        </div>
+      );
+    }
+    
+    // Still checking approval status
+    if (isApproved === null) {
+      return (
+        <div className="min-h-screen flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary-600" />
+        </div>
+      );
+    }
   }
 
   return <>{children}</>;

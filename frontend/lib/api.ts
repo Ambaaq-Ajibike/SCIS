@@ -1,61 +1,8 @@
-import axios from 'axios';
+import apiClient from '@/services/apiClient';
+import { API_ENDPOINTS } from '@/constants';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5066/api';
-
-const api = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// Request interceptor to add auth token and debugging
-api.interceptors.request.use(
-  (config) => {
-    console.log('API Request:', config.method?.toUpperCase(), config.url, config.baseURL + config.url);
-    
-    // Check for patient token first, then regular token
-    const patientToken = localStorage.getItem('patientToken');
-    const token = localStorage.getItem('token');
-    
-    if (patientToken) {
-      config.headers.Authorization = `Bearer ${patientToken}`;
-    } else if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    console.error('API Request Error:', error);
-    return Promise.reject(error);
-  }
-);
-
-// Response interceptor for debugging and auth error handling
-api.interceptors.response.use(
-  (response) => {
-    console.log('API Response:', response.status, response.config.url);
-    return response;
-  },
-  (error) => {
-    console.error('API Response Error:', error.response?.status, error.response?.data, error.config?.url);
-    
-    if (error.response?.status === 401) {
-      // Check if it's a patient token or regular token
-      const patientToken = localStorage.getItem('patientToken');
-      if (patientToken) {
-        localStorage.removeItem('patientToken');
-        localStorage.removeItem('patient');
-        window.location.href = '/patient-login';
-      } else {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        window.location.href = '/login';
-      }
-    }
-    return Promise.reject(error);
-  }
-);
+// Re-export apiClient as api for backward compatibility
+const api = apiClient;
 
 // Types
 export interface LoginRequest {
@@ -82,6 +29,12 @@ export interface PatientLoginResponse {
   patient: Patient;
 }
 
+export interface ApiError {
+  message: string;
+  statusCode?: number;
+  errors?: Record<string, string[]>;
+}
+
 export interface User {
   id: string;
   username: string;
@@ -89,6 +42,8 @@ export interface User {
   role: 'SystemManager' | 'HospitalManager' | 'Doctor' | 'Staff' | 'Patient';
   hospitalId?: string;
   hospitalName?: string;
+  hospitalIsApproved?: boolean;
+  hospitalIsActive?: boolean;
 }
 
 export interface PatientFeedbackDto {
@@ -221,6 +176,7 @@ export interface HospitalDto {
   phoneNumber: string;
   email: string;
   isActive: boolean;
+  isApproved: boolean;
   createdAt: string;
 }
 
@@ -283,17 +239,17 @@ export interface EndpointParameterDto {
 // API Services
 export const authService = {
   login: async (credentials: LoginRequest): Promise<LoginResponse> => {
-    const response = await api.post('/auth/login', credentials);
+    const response = await api.post(API_ENDPOINTS.AUTH.LOGIN, credentials);
     return response.data;
   },
 
   logout: async (): Promise<void> => {
-    await api.post('/auth/logout');
+    await api.post(API_ENDPOINTS.AUTH.LOGOUT);
   },
 
   validateToken: async (): Promise<boolean> => {
     try {
-      await api.post('/auth/validate');
+      await api.post(API_ENDPOINTS.AUTH.VALIDATE);
       return true;
     } catch {
       return false;
@@ -303,22 +259,22 @@ export const authService = {
 
 export const patientAuthService = {
   login: async (credentials: PatientLoginRequest): Promise<PatientLoginResponse> => {
-    const response = await api.post('/patientauth/login', credentials);
+    const response = await api.post(API_ENDPOINTS.PATIENT_AUTH.LOGIN, credentials);
     return response.data;
   },
 
   completeSignup: async (signupData: CompletePatientSignupDto): Promise<PatientLoginResponse> => {
-    const response = await api.post('/patientauth/complete-signup', signupData);
+    const response = await api.post(API_ENDPOINTS.PATIENT_AUTH.COMPLETE_SIGNUP, signupData);
     return response.data;
   },
 
   logout: async (): Promise<void> => {
-    await api.post('/patientauth/logout');
+    await api.post(API_ENDPOINTS.PATIENT_AUTH.LOGOUT);
   },
 
   validateToken: async (): Promise<boolean> => {
     try {
-      await api.post('/patientauth/validate');
+      await api.post(API_ENDPOINTS.PATIENT_AUTH.VALIDATE);
       return true;
     } catch {
       return false;
@@ -328,50 +284,49 @@ export const patientAuthService = {
 
 export const feedbackService = {
   submitFeedback: async (feedback: PatientFeedbackDto): Promise<PatientFeedbackResponse> => {
-    const response = await api.post('/feedback/submit', feedback);
+    const response = await api.post(API_ENDPOINTS.FEEDBACK.SUBMIT, feedback);
     return response.data;
   },
 
   getDoctorAverageTES: async (doctorId: string): Promise<{ doctorId: string; averageTES: number }> => {
-    const response = await api.get(`/feedback/doctor/${doctorId}/average-tes`);
+    const response = await api.get(API_ENDPOINTS.FEEDBACK.DOCTOR_AVERAGE_TES(doctorId));
     return response.data;
   },
 
   getHospitalAverageTES: async (hospitalId: string): Promise<{ hospitalId: string; averageTES: number }> => {
-    const response = await api.get(`/feedback/hospital/${hospitalId}/average-tes`);
+    const response = await api.get(API_ENDPOINTS.FEEDBACK.HOSPITAL_AVERAGE_TES(hospitalId));
     return response.data;
   },
 
   getPerformanceInsights: async (): Promise<any[]> => {
-    const response = await api.get('/feedback/insights');
+    const response = await api.get(API_ENDPOINTS.FEEDBACK.INSIGHTS);
     return response.data;
   },
 
   getPatientHospitalDoctors: async (): Promise<Doctor[]> => {
-    const response = await api.get('/feedback/patient/doctors');
-    console.log({response})
+    const response = await api.get(API_ENDPOINTS.FEEDBACK.PATIENT_DOCTORS);
     return response.data;
   },
 };
 
 export const dataRequestService = {
   requestData: async (request: DataRequestDto): Promise<DataRequestResponse> => {
-    const response = await api.post('/datarequest/request', request);
+    const response = await api.post(API_ENDPOINTS.DATA_REQUEST.REQUEST, request);
     return response.data;
   },
 
   approveRequest: async (approval: DataRequestApproval): Promise<DataRequestResponse> => {
-    const response = await api.post('/datarequest/approve', approval);
+    const response = await api.post(API_ENDPOINTS.DATA_REQUEST.APPROVE, approval);
     return response.data;
   },
 
   getPendingRequests: async (): Promise<PendingDataRequest[]> => {
-    const response = await api.get('/datarequest/pending');
+    const response = await api.get(API_ENDPOINTS.DATA_REQUEST.PENDING);
     return response.data;
   },
 
   getRequestHistory: async (): Promise<DataRequestResponse[]> => {
-    const response = await api.get('/datarequest/history');
+    const response = await api.get(API_ENDPOINTS.DATA_REQUEST.HISTORY);
     return response.data;
   },
 };
@@ -411,84 +366,84 @@ export const mlService = {
 export const patientService = {
   getPatients: async (search?: string): Promise<Patient[]> => {
     const params = search ? { search } : {};
-    const response = await api.get('/patient', { params });
+    const response = await api.get(API_ENDPOINTS.PATIENT.BASE, { params });
     return response.data;
   },
 
   getPatientById: async (patientId: string): Promise<Patient> => {
-    const response = await api.get(`/patient/${patientId}`);
+    const response = await api.get(API_ENDPOINTS.PATIENT.BY_ID(patientId));
     return response.data;
   },
 
   createPatient: async (patientData: CreatePatientDto): Promise<Patient> => {
-    const response = await api.post('/patient', patientData);
+    const response = await api.post(API_ENDPOINTS.PATIENT.BASE, patientData);
     return response.data;
   },
 
   updatePatient: async (patientId: string, patientData: UpdatePatientDto): Promise<Patient> => {
-    const response = await api.put(`/patient/${patientId}`, patientData);
+    const response = await api.put(API_ENDPOINTS.PATIENT.BY_ID(patientId), patientData);
     return response.data;
   },
 
   deletePatient: async (patientId: string): Promise<void> => {
-    await api.delete(`/patient/${patientId}`);
+    await api.delete(API_ENDPOINTS.PATIENT.BY_ID(patientId));
   },
 };
 
 export const hospitalService = {
   getHospitals: async (): Promise<HospitalDto[]> => {
-    const response = await api.get('/hospital');
+    const response = await api.get(API_ENDPOINTS.HOSPITAL.BASE);
     return response.data;
   },
 
   getDoctorsByHospital: async (hospitalId: string): Promise<Doctor[]> => {
-    const response = await api.get(`/hospital/${hospitalId}/doctors`);
+    const response = await api.get(API_ENDPOINTS.HOSPITAL.DOCTORS(hospitalId));
     return response.data;
   },
 };
 
 export const hospitalSettingsService = {
   getHospitalSettings: async (hospitalId: string): Promise<HospitalSettingsDto> => {
-    const response = await api.get(`/hospitalsettings/${hospitalId}`);
+    const response = await api.get(API_ENDPOINTS.HOSPITAL_SETTINGS.BY_ID(hospitalId));
     return response.data;
   },
 
   createHospitalSettings: async (settingsData: CreateHospitalSettingsDto): Promise<HospitalSettingsDto> => {
-    const response = await api.post('/hospitalsettings', settingsData);
+    const response = await api.post(API_ENDPOINTS.HOSPITAL_SETTINGS.BASE, settingsData);
     return response.data;
   },
 
   updateHospitalSettings: async (hospitalId: string, settingsData: UpdateHospitalSettingsDto): Promise<HospitalSettingsDto> => {
-    const response = await api.put(`/hospitalsettings/${hospitalId}`, settingsData);
+    const response = await api.put(API_ENDPOINTS.HOSPITAL_SETTINGS.BY_ID(hospitalId), settingsData);
     return response.data;
   },
 
   deleteHospitalSettings: async (hospitalId: string): Promise<void> => {
-    await api.delete(`/hospitalsettings/${hospitalId}`);
+    await api.delete(API_ENDPOINTS.HOSPITAL_SETTINGS.BY_ID(hospitalId));
   },
 
-          validateEndpoint: async (endpointUrl: string, endpointType: string): Promise<EndpointValidationDto> => {
-            const response = await api.post('/hospitalsettings/validate-endpoint', {
-              endpointUrl,
-              endpointType
-            });
-            return response.data;
-          },
+  validateEndpoint: async (endpointUrl: string, endpointType: string): Promise<EndpointValidationDto> => {
+    const response = await api.post(API_ENDPOINTS.HOSPITAL_SETTINGS.VALIDATE_ENDPOINT, {
+      endpointUrl,
+      endpointType
+    });
+    return response.data;
+  },
 
   validateAllEndpoints: async (hospitalId: string): Promise<HospitalSettingsDto> => {
-    const response = await api.post(`/hospitalsettings/${hospitalId}/validate-all`);
+    const response = await api.post(API_ENDPOINTS.HOSPITAL_SETTINGS.VALIDATE_ALL(hospitalId));
     return response.data;
   },
 
   validateSpecificEndpoints: async (hospitalId: string, endpointTypes: string[]): Promise<EndpointValidationDto[]> => {
-    const response = await api.post(`/hospitalsettings/${hospitalId}/validate-specific`, {
+    const response = await api.post(API_ENDPOINTS.HOSPITAL_SETTINGS.VALIDATE_SPECIFIC(hospitalId), {
       endpointTypes
     });
     return response.data;
   },
 
   buildUrl: async (baseUrl: string, parametersJson: string, values: Record<string, any>): Promise<any> => {
-    const response = await api.post('/hospitalsettings/build-url', {
+    const response = await api.post(API_ENDPOINTS.HOSPITAL_SETTINGS.BUILD_URL, {
       baseUrl,
       parametersJson,
       values
@@ -499,27 +454,27 @@ export const hospitalSettingsService = {
 
 export const dashboardService = {
   getDashboardStats: async (): Promise<any> => {
-    const response = await api.get('/dashboard/stats');
+    const response = await api.get(API_ENDPOINTS.DASHBOARD.STATS);
     return response.data;
   },
 
   getHospitalPerformance: async (): Promise<any[]> => {
-    const response = await api.get('/dashboard/hospital-performance');
+    const response = await api.get(API_ENDPOINTS.DASHBOARD.HOSPITAL_PERFORMANCE);
     return response.data;
   },
 
   getSentimentAnalysis: async (): Promise<any[]> => {
-    const response = await api.get('/dashboard/sentiment-analysis');
+    const response = await api.get(API_ENDPOINTS.DASHBOARD.SENTIMENT_ANALYSIS);
     return response.data;
   },
 
   getDoctors: async (): Promise<any[]> => {
-    const response = await api.get('/dashboard/doctors');
+    const response = await api.get(API_ENDPOINTS.DASHBOARD.DOCTORS);
     return response.data;
   },
 
   getPatients: async (): Promise<any[]> => {
-    const response = await api.get('/dashboard/patients');
+    const response = await api.get(API_ENDPOINTS.DASHBOARD.PATIENTS);
     return response.data;
   },
 };
@@ -590,52 +545,52 @@ export interface HospitalDetail {
 
 export const systemManagerService = {
   getDashboard: async (): Promise<SystemManagerDashboard> => {
-    const response = await api.get('/systemmanager/dashboard');
+    const response = await api.get(API_ENDPOINTS.SYSTEM_MANAGER.DASHBOARD);
     return response.data;
   },
 
   getSystemAnalytics: async (): Promise<SystemAnalytics> => {
-    const response = await api.get('/systemmanager/analytics');
+    const response = await api.get(API_ENDPOINTS.SYSTEM_MANAGER.ANALYTICS);
     return response.data;
   },
 
   getAllHospitals: async (): Promise<HospitalAnalytics[]> => {
-    const response = await api.get('/systemmanager/hospitals');
+    const response = await api.get(API_ENDPOINTS.SYSTEM_MANAGER.HOSPITALS);
     return response.data;
   },
 
   getHospitalDetail: async (hospitalId: string): Promise<HospitalDetail> => {
-    const response = await api.get(`/systemmanager/hospitals/${hospitalId}`);
+    const response = await api.get(API_ENDPOINTS.SYSTEM_MANAGER.HOSPITAL_DETAIL(hospitalId));
     return response.data;
   },
 
   getAllDoctors: async (): Promise<DoctorPerformance[]> => {
-    const response = await api.get('/systemmanager/doctors');
+    const response = await api.get(API_ENDPOINTS.SYSTEM_MANAGER.DOCTORS);
     return response.data;
   },
 
   getDoctorsByHospital: async (hospitalId: string): Promise<DoctorPerformance[]> => {
-    const response = await api.get(`/systemmanager/hospitals/${hospitalId}/doctors`);
+    const response = await api.get(API_ENDPOINTS.SYSTEM_MANAGER.DOCTORS_BY_HOSPITAL(hospitalId));
     return response.data;
   },
 
   getAllDataRequests: async (): Promise<DataRequestResponse[]> => {
-    const response = await api.get('/systemmanager/data-requests');
+    const response = await api.get(API_ENDPOINTS.SYSTEM_MANAGER.DATA_REQUESTS);
     return response.data;
   },
 
   getDataRequestsByHospital: async (hospitalId: string): Promise<DataRequestResponse[]> => {
-    const response = await api.get(`/systemmanager/hospitals/${hospitalId}/data-requests`);
+    const response = await api.get(API_ENDPOINTS.SYSTEM_MANAGER.DATA_REQUESTS_BY_HOSPITAL(hospitalId));
     return response.data;
   },
 
   getAllFeedbacks: async (): Promise<PatientFeedbackResponse[]> => {
-    const response = await api.get('/systemmanager/feedbacks');
+    const response = await api.get(API_ENDPOINTS.SYSTEM_MANAGER.FEEDBACKS);
     return response.data;
   },
 
   getFeedbacksByHospital: async (hospitalId: string): Promise<PatientFeedbackResponse[]> => {
-    const response = await api.get(`/systemmanager/hospitals/${hospitalId}/feedbacks`);
+    const response = await api.get(API_ENDPOINTS.SYSTEM_MANAGER.FEEDBACKS_BY_HOSPITAL(hospitalId));
     return response.data;
   },
 };
@@ -644,14 +599,10 @@ export interface RegisterHospitalRequest {
   hospitalName: string;
   address: string;
   phoneNumber?: string;
-  email: string;
   licenseNumber?: string;
   managerUsername: string;
   managerEmail: string;
   managerPassword: string;
-  contactPersonName: string;
-  contactPersonEmail: string;
-  contactPersonPhone: string;
   verificationDocuments?: string;
   verificationNotes?: string;
 }
@@ -671,26 +622,26 @@ export interface ApproveHospitalRequest {
 
 export const onboardingService = {
   registerHospital: async (data: RegisterHospitalRequest): Promise<LoginResponse> => {
-    const response = await api.post('/onboarding/register-hospital', data);
+    const response = await api.post(API_ENDPOINTS.ONBOARDING.REGISTER_HOSPITAL, data);
     return response.data;
   },
 
   createDoctor: async (data: CreateDoctorRequest): Promise<Doctor> => {
-    const response = await api.post('/onboarding/create-doctor', data);
+    const response = await api.post(API_ENDPOINTS.ONBOARDING.CREATE_DOCTOR, data);
     return response.data;
   },
 
   approveHospital: async (data: ApproveHospitalRequest): Promise<void> => {
-    await api.post('/onboarding/approve-hospital', data);
+    await api.post(API_ENDPOINTS.ONBOARDING.APPROVE_HOSPITAL, data);
   },
 
   getPendingHospitals: async (): Promise<HospitalDto[]> => {
-    const response = await api.get('/onboarding/pending-hospitals');
+    const response = await api.get(API_ENDPOINTS.ONBOARDING.PENDING_HOSPITALS);
     return response.data;
   },
 
   getHospital: async (hospitalId: string): Promise<HospitalDto> => {
-    const response = await api.get(`/onboarding/hospital/${hospitalId}`);
+    const response = await api.get(API_ENDPOINTS.ONBOARDING.HOSPITAL(hospitalId));
     return response.data;
   },
 };

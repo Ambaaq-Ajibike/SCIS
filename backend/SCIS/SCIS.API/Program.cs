@@ -94,12 +94,22 @@ builder.Services.AddScoped<IDataRequestService, DataRequestService>();
 builder.Services.AddScoped<IDataRequestEndpointService, DataRequestEndpointService>();
 builder.Services.AddScoped<IFeedbackService, FeedbackService>();
 builder.Services.AddScoped<IMLService, MLService>();
-builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IHospitalSettingsService, HospitalSettingsService>();
 builder.Services.AddScoped<IFhirValidationService, FhirValidationService>();
 builder.Services.AddScoped<ISystemManagerService, SystemManagerService>();
 builder.Services.AddScoped<IOnboardingService, OnboardingService>();
-builder.Services.AddHttpClient<EmailService>();
+
+// Register EmailService with HttpClient
+builder.Services.AddHttpClient<IEmailService, EmailService>((serviceProvider, httpClient) =>
+{
+    var configuration = serviceProvider.GetRequiredService<IConfiguration>();
+    var apiKey = configuration["Brevo:ApiKey"];
+    if (!string.IsNullOrEmpty(apiKey))
+    {
+        httpClient.DefaultRequestHeaders.Add("api-key", apiKey);
+        httpClient.DefaultRequestHeaders.Add("accept", "application/json");
+    }
+});
 builder.Services.AddHttpClient<FhirValidationService>();
 builder.Services.AddHttpClient<DataRequestService>();
 builder.Services.AddHttpClient<DataRequestEndpointService>();

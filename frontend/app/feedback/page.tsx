@@ -79,8 +79,6 @@ export default function FeedbackPage() {
   }, [isAuthenticated, patient]);
 
   useEffect(() => {
-    console.log('Search effect triggered:', { searchTerm, doctorsCount: doctors.length });
-    
     // Check if a doctor is already selected (searchTerm contains " - " which indicates selection)
     const isDoctorSelected = searchTerm.includes(' - ');
     
@@ -102,7 +100,6 @@ export default function FeedbackPage() {
                doctor.firstName.toLowerCase().includes(searchLower) ||
                doctor.lastName.toLowerCase().includes(searchLower);
       });
-      console.log('Filtered doctors:', filtered);
       setFilteredDoctors(filtered);
       setShowDoctorDropdown(filtered.length > 0);
     } else {
@@ -128,9 +125,7 @@ export default function FeedbackPage() {
   const fetchPatientHospitalDoctors = async () => {
     try {
       setLoading(true);
-      console.log('Fetching doctors for patient hospital...');
       const doctorsData = await feedbackService.getPatientHospitalDoctors();
-      console.log('Fetched doctors:', doctorsData);
       setDoctors(doctorsData);
     } catch (error) {
       console.error('Error fetching doctors:', error);

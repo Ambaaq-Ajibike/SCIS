@@ -31,7 +31,6 @@ public class HospitalController : ControllerBase
                     Name = h.Name,
                     Address = h.Address,
                     PhoneNumber = h.PhoneNumber ?? "",
-                    Email = h.Email ?? "",
                     IsActive = h.IsActive,
                     CreatedAt = h.CreatedAt
                 })

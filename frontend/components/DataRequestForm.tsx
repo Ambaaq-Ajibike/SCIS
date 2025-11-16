@@ -10,6 +10,7 @@ import {
   CheckCircle
 } from 'lucide-react';
 import { dataRequestService } from '@/lib/api';
+import { Input } from '@/components/ui/Input';
 
 interface DataRequestFormProps {
   onRequestSubmitted?: () => void;
@@ -138,25 +139,22 @@ export default function DataRequestForm({ onRequestSubmitted, onIntraHospitalSuc
         
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Patient ID */}
-          <div>
-            <label htmlFor="patientId" className="block text-sm font-medium text-gray-700 mb-2">
-              <User className="h-4 w-4 inline mr-1" />
-              Patient ID
-            </label>
-            <input
-              type="text"
-              id="patientId"
-              name="patientId"
-              value={formData.patientId}
-              onChange={handleInputChange}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              placeholder="Enter patient ID or search for patient..."
-            />
-            <p className="mt-1 text-sm text-gray-500">
-              Enter the patient's unique identifier. The system will automatically determine which hospital the patient belongs to.
-            </p>
-          </div>
+          <Input
+            type="text"
+            id="patientId"
+            name="patientId"
+            label={
+              <span>
+                <User className="h-4 w-4 inline mr-1" />
+                Patient ID
+              </span>
+            }
+            value={formData.patientId}
+            onChange={handleInputChange}
+            required
+            placeholder="Enter patient ID or search for patient..."
+            helperText="Enter the patient's unique identifier. The system will automatically determine which hospital the patient belongs to."
+          />
 
           {/* Data Type */}
           <div>

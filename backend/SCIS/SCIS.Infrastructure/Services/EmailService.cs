@@ -351,4 +351,158 @@ You can view the full details and any response data in your dashboard: {dashboar
 This is an automated message from the SCIS system. Please do not reply to this email.
 ";
     }
+
+    public async Task<bool> SendHospitalApprovalEmailAsync(string managerEmail, string managerName, string hospitalName, bool isApproved, string? notes = null)
+    {
+        try
+        {
+            var fromEmail = _configuration["Brevo:FromEmail"] ?? "noreply@scis.com";
+            var fromName = _configuration["Brevo:FromName"] ?? "SCIS System";
+            var frontendUrl = _configuration["Frontend:BaseUrl"] ?? "http://localhost:3000";
+
+            // Check if Brevo API key is configured
+            if (string.IsNullOrEmpty(_brevoApiKey))
+            {
+                Console.WriteLine("ERROR: Brevo API Key is not configured. Cannot send email.");
+                return false;
+            }
+
+            var emailContent = GenerateHospitalApprovalEmail(managerName, hospitalName, isApproved, notes, frontendUrl);
+
+            var emailRequest = new
+            {
+                sender = new { email = fromEmail, name = fromName },
+                to = new[] { new { email = managerEmail, name = managerName } },
+                subject = $"Hospital Registration {(isApproved ? "Approved" : "Rejected")} - {hospitalName}",
+                htmlContent = emailContent,
+                textContent = GenerateHospitalApprovalEmailText(managerName, hospitalName, isApproved, notes, frontendUrl)
+            };
+
+            var json = JsonSerializer.Serialize(emailRequest);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            Console.WriteLine($"Sending approval email to {managerEmail} for hospital {hospitalName}");
+            var response = await _httpClient.PostAsync(_brevoApiUrl, content);
+            
+            if (!response.IsSuccessStatusCode)
+            {
+                var responseContent = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"Email send failed. Status: {response.StatusCode}, Response: {responseContent}");
+            }
+            else
+            {
+                Console.WriteLine($"Email successfully sent to {managerEmail}");
+            }
+            
+            return response.IsSuccessStatusCode;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error sending hospital approval email: {ex.Message}");
+            Console.WriteLine($"Stack trace: {ex.StackTrace}");
+            return false;
+        }
+    }
+
+    private string GenerateHospitalApprovalEmail(string managerName, string hospitalName, bool isApproved, string? notes, string frontendUrl)
+    {
+        var loginUrl = $"{frontendUrl}/login";
+        var statusColor = isApproved ? "#059669" : "#dc2626";
+        var statusText = isApproved ? "Approved" : "Rejected";
+        var statusIcon = isApproved ? "✓" : "✗";
+        
+        return $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <title>Hospital Registration {statusText}</title>
+    <style>
+        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+        .header {{ background-color: {statusColor}; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }}
+        .content {{ background-color: #f8fafc; padding: 30px; border-radius: 0 0 8px 8px; }}
+        .button {{ display: inline-block; background-color: {statusColor}; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 20px 0; }}
+        .info-box {{ background-color: {(isApproved ? "#f0fdf4" : "#fef2f2")}; border-left: 4px solid {statusColor}; padding: 15px; margin: 20px 0; }}
+        .footer {{ text-align: center; margin-top: 30px; color: #64748b; font-size: 14px; }}
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <div class='header'>
+            <h1>{statusIcon} Hospital Registration {statusText}</h1>
+            <p>SCIS - Smart Connected Integrated System</p>
+        </div>
+        <div class='content'>
+            <h2>Hello {managerName}!</h2>
+            <p>Your hospital registration for <strong>{hospitalName}</strong> has been <strong>{statusText.ToLower()}</strong> by the system administrator.</p>
+            
+            <div class='info-box'>
+                <h3>Hospital Information:</h3>
+                <p><strong>Hospital Name:</strong> {hospitalName}</p>
+                <p><strong>Status:</strong> {statusText}</p>
+                <p><strong>Approval Date:</strong> {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC</p>
+                {(isApproved ? "<p><strong>Your hospital is now active!</strong> You can log in and start using all features of the SCIS platform.</p>" : "<p><strong>Your registration was not approved.</strong> Please contact the system administrator for more information.</p>")}
+            </div>
+            
+            {(isApproved ? $@"
+            <p>You can now log in to your dashboard and perform all actions:</p>
+            <a href='{loginUrl}' class='button' style='color:white'>Log In to Dashboard</a>
+            <p>If the button doesn't work, you can copy and paste this link into your browser:</p>
+            <p style='word-break: break-all; color: {statusColor};'>{loginUrl}</p>
+            " : "")}
+            
+            {(!string.IsNullOrEmpty(notes) ? $@"
+            <div class='info-box'>
+                <h3>Administrator Notes:</h3>
+                <p>{notes}</p>
+            </div>
+            " : "")}
+            
+            {(isApproved ? "<p><strong>Next Steps:</strong> After logging in, you can add doctors, configure hospital settings, and start managing patient data.</p>" : "")}
+        </div>
+        <div class='footer'>
+            <p>This is an automated message from the SCIS system. Please do not reply to this email.</p>
+            <p>If you have any questions, please contact the system administrator.</p>
+        </div>
+    </div>
+</body>
+</html>";
+    }
+
+    private string GenerateHospitalApprovalEmailText(string managerName, string hospitalName, bool isApproved, string? notes, string frontendUrl)
+    {
+        var loginUrl = $"{frontendUrl}/login";
+        var statusText = isApproved ? "Approved" : "Rejected";
+        
+        return $@"
+Hospital Registration {statusText} - SCIS System
+
+Hello {managerName}!
+
+Your hospital registration for {hospitalName} has been {statusText.ToLower()} by the system administrator.
+
+Hospital Information:
+- Hospital Name: {hospitalName}
+- Status: {statusText}
+- Approval Date: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC
+
+{(isApproved ? $@"
+Your hospital is now active! You can log in and start using all features of the SCIS platform.
+
+You can now log in to your dashboard: {loginUrl}
+
+Next Steps: After logging in, you can add doctors, configure hospital settings, and start managing patient data.
+" : "Your registration was not approved. Please contact the system administrator for more information.")}
+
+{(!string.IsNullOrEmpty(notes) ? $@"
+Administrator Notes:
+{notes}
+" : "")}
+
+This is an automated message from the SCIS system. Please do not reply to this email.
+If you have any questions, please contact the system administrator.
+";
+    }
 }

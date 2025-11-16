@@ -100,7 +100,7 @@ export default function DataRequestManager({ userRole }: DataRequestManagerProps
     setApprovingRequestId(requestId);
     
     try {
-      const response = await dataRequestService.approveRequest({
+      await dataRequestService.approveRequest({
         requestId,
         isApproved,
         reason: approvalReason

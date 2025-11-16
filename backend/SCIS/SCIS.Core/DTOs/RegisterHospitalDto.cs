@@ -15,11 +15,6 @@ public class RegisterHospitalDto
     [MaxLength(20)]
     public string? PhoneNumber { get; set; }
     
-    [Required]
-    [EmailAddress]
-    [MaxLength(100)]
-    public string Email { get; set; } = string.Empty;
-    
     [MaxLength(50)]
     public string? LicenseNumber { get; set; }
     
@@ -36,20 +31,6 @@ public class RegisterHospitalDto
     [Required]
     [MinLength(6)]
     public string ManagerPassword { get; set; } = string.Empty;
-    
-    // Contact Person Details
-    [Required]
-    [MaxLength(200)]
-    public string ContactPersonName { get; set; } = string.Empty;
-    
-    [Required]
-    [EmailAddress]
-    [MaxLength(100)]
-    public string ContactPersonEmail { get; set; } = string.Empty;
-    
-    [Required]
-    [MaxLength(20)]
-    public string ContactPersonPhone { get; set; } = string.Empty;
     
     // Verification Details
     [MaxLength(500)]

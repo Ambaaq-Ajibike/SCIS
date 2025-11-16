@@ -61,16 +61,6 @@ export default function EndpointParameterConfig({
     onParametersChange(updatedParameters);
   };
 
-  const getLocationColor = (location: string) => {
-    switch (location) {
-      case 'query': return 'bg-blue-100 text-blue-800';
-      case 'path': return 'bg-green-100 text-green-800';
-      case 'body': return 'bg-purple-100 text-purple-800';
-      case 'header': return 'bg-orange-100 text-orange-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
   const getTypeColor = (type: string) => {
     switch (type) {
       case 'string': return 'bg-blue-100 text-blue-800';
@@ -186,9 +176,6 @@ export default function EndpointParameterConfig({
                   {/* Parameter Preview */}
                   <div className="mt-2 flex items-center space-x-2">
                     <span className="text-xs text-gray-500">Preview:</span>
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getLocationColor(param.location)}`}>
-                      {param.location}
-                    </span>
                     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getTypeColor(param.type)}`}>
                       {param.type}
                     </span>

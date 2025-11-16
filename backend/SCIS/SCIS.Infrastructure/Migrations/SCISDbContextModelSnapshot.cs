@@ -274,18 +274,6 @@ namespace SCIS.Infrastructure.Migrations
                     b.Property<double>("AverageTES")
                         .HasColumnType("double precision");
 
-                    b.Property<string>("ContactPersonEmail")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<string>("ContactPersonName")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<string>("ContactPersonPhone")
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 

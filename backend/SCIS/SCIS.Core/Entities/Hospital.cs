@@ -38,15 +38,6 @@ public class Hospital
     [MaxLength(1000)]
     public string? VerificationNotes { get; set; } // Additional notes for verification
     
-    [MaxLength(200)]
-    public string? ContactPersonName { get; set; } // Primary contact person
-    
-    [MaxLength(100)]
-    public string? ContactPersonEmail { get; set; }
-    
-    [MaxLength(20)]
-    public string? ContactPersonPhone { get; set; }
-    
     // Performance metrics
     public double AverageTES { get; set; } = 0.0;
     public double InteroperabilitySuccessRate { get; set; } = 0.0;

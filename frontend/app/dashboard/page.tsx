@@ -16,20 +16,19 @@ import {
   Cell
 } from 'recharts';
 import { 
-  Activity, 
-  Users, 
-  TrendingUp, 
-  AlertTriangle,
-  Building2,
   UserCheck,
-  BarChart3
+  AlertTriangle,
+  TrendingUp
 } from 'lucide-react';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import Layout from '@/components/Layout';
-import { feedbackService, mlService, dashboardService, systemManagerService } from '@/lib/api';
+import { LoadingSpinner } from '@/components/ui';
+import { DashboardStats, HospitalFilter } from '@/components/features';
+import { dashboardService, systemManagerService } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { USER_ROLES } from '@/constants';
 
-interface DashboardStats {
+interface DashboardStatsData {
   totalHospitals?: number;
   totalPatients: number;
   totalDoctors?: number;
@@ -59,7 +58,7 @@ const COLORS = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6'];
 
 export default function Dashboard() {
   const { user } = useAuth();
-  const [stats, setStats] = useState<DashboardStats>({
+  const [stats, setStats] = useState<DashboardStatsData>({
     totalPatients: 0,
     averageTES: 0,
     interoperabilityRate: 0,
@@ -103,7 +102,6 @@ export default function Dashboard() {
         hospitalName: h.hospitalName || h.HospitalName || ''
       }));
       setHospitals(formattedHospitals);
-      console.log('Hospitals loaded:', formattedHospitals.length);
     } catch (error) {
       console.error('Error fetching hospitals:', error);
       setHospitals([]);
@@ -182,7 +180,7 @@ export default function Dashboard() {
       setStats(dashboardStats);
 
       // Set hospital performance data
-      setHospitalPerformance(hospitalPerf.map((h: any, index: number) => ({
+      setHospitalPerformance(hospitalPerf.map((h: any) => ({
         hospitalId: h.hospitalId,
         hospitalName: h.hospitalName,
         averageTES: h.averageTES,
@@ -247,24 +245,17 @@ export default function Dashboard() {
         performance: h.performanceIndex
       }));
 
-  // Prepare volume data based on user role
-  const volumeData = user?.role === 'HospitalManager' 
-    ? hospitalPerformance.map(h => ({
-        name: h.hospitalName.split(' ')[0],
-        volume: h.patientVolume
-      }))
-    : hospitalPerformance.map(h => ({
-        name: h.hospitalName.split(' ')[0],
-        volume: h.patientVolume
-      }));
+  // Prepare volume data
+  const volumeData = hospitalPerformance.map(h => ({
+    name: h.hospitalName.split(' ')[0],
+    volume: h.patientVolume
+  }));
 
   if (loading) {
     return (
       <ProtectedRoute>
         <Layout>
-          <div className="min-h-screen flex items-center justify-center">
-            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary-600"></div>
-          </div>
+          <LoadingSpinner fullScreen text="Loading dashboard..." />
         </Layout>
       </ProtectedRoute>
     );
@@ -294,158 +285,27 @@ export default function Dashboard() {
           </div>
 
           {/* Hospital Filter for SystemManager */}
-          {user?.role === 'SystemManager' && (
-            <div className="mb-6 bg-white shadow rounded-lg p-4">
-              <label htmlFor="hospital-filter" className="block text-sm font-medium text-gray-700 mb-2">
-                Filter by Hospital
-              </label>
-              {hospitalsLoading ? (
-                <div className="flex items-center text-sm text-gray-500">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-600 mr-2"></div>
-                  Loading hospitals...
-                </div>
-              ) : (
-                <select
-                  id="hospital-filter"
-                  value={selectedHospitalId}
-                  onChange={(e) => setSelectedHospitalId(e.target.value)}
-                  className="block w-full max-w-xs border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                  disabled={hospitals.length === 0}
-                >
-                  <option value="">All Hospitals</option>
-                  {hospitals.map((hospital) => (
-                    <option key={hospital.hospitalId} value={hospital.hospitalId}>
-                      {hospital.hospitalName}
-                    </option>
-                  ))}
-                </select>
-              )}
-              {!hospitalsLoading && hospitals.length === 0 && (
-                <p className="mt-2 text-sm text-red-600">No hospitals available</p>
-              )}
-            </div>
+          {user?.role === USER_ROLES.SYSTEM_MANAGER && (
+            <HospitalFilter
+              hospitals={hospitals.map(h => ({
+                hospitalId: h.hospitalId,
+                hospitalName: h.hospitalName,
+              }))}
+              selectedHospitalId={selectedHospitalId}
+              onHospitalChange={setSelectedHospitalId}
+              isLoading={hospitalsLoading}
+            />
           )}
 
           {/* Dashboard Content */}
-          <>
-              {/* Stats Overview */}
-              <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 ${user?.role === 'SystemManager' && !selectedHospitalId ? 'xl:grid-cols-6' : 'xl:grid-cols-5'} gap-6 mb-8`}>
-            {user?.role === 'SystemManager' && !selectedHospitalId && (
-              <div className="bg-white overflow-hidden shadow rounded-lg">
-                <div className="p-5">
-                  <div className="flex items-center">
-                    <div className="flex-shrink-0">
-                      <Building2 className="h-8 w-8 text-primary-600" />
-                    </div>
-                    <div className="ml-5 w-0 flex-1">
-                      <dl>
-                        <dt className="text-sm font-medium text-gray-500 truncate">Hospitals</dt>
-                        <dd className="text-lg font-medium text-gray-900">{stats.totalHospitals}</dd>
-                      </dl>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {(user?.role === 'HospitalManager' || (user?.role === 'SystemManager' && selectedHospitalId)) && (
-              <div className="bg-white overflow-hidden shadow rounded-lg">
-                <div className="p-5">
-                  <div className="flex items-center">
-                    <div className="flex-shrink-0">
-                      <UserCheck className="h-8 w-8 text-blue-600" />
-                    </div>
-                    <div className="ml-5 w-0 flex-1">
-                      <dl>
-                        <dt className="text-sm font-medium text-gray-500 truncate">Doctors</dt>
-                        <dd className="text-lg font-medium text-gray-900">{stats.totalDoctors || doctorsData.length}</dd>
-                      </dl>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div className="bg-white overflow-hidden shadow rounded-lg">
-              <div className="p-5">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <Users className="h-8 w-8 text-green-600" />
-                  </div>
-                  <div className="ml-5 w-0 flex-1">
-                    <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">Patients</dt>
-                      <dd className="text-lg font-medium text-gray-900">{stats.totalPatients.toLocaleString()}</dd>
-                    </dl>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white overflow-hidden shadow rounded-lg">
-              <div className="p-5">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <Activity className="h-8 w-8 text-blue-600" />
-                  </div>
-                  <div className="ml-5 w-0 flex-1">
-                    <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">Avg TES</dt>
-                      <dd className="text-lg font-medium text-gray-900">{stats.averageTES}%</dd>
-                    </dl>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white overflow-hidden shadow rounded-lg">
-              <div className="p-5">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <TrendingUp className="h-8 w-8 text-purple-600" />
-                  </div>
-                  <div className="ml-5 w-0 flex-1">
-                    <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">Interop Rate</dt>
-                      <dd className="text-lg font-medium text-gray-900">{stats.interoperabilityRate}%</dd>
-                    </dl>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white overflow-hidden shadow rounded-lg">
-              <div className="p-5">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <BarChart3 className="h-8 w-8 text-orange-600" />
-                  </div>
-                  <div className="ml-5 w-0 flex-1">
-                    <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">Performance</dt>
-                      <dd className="text-lg font-medium text-gray-900">{stats.performanceIndex}%</dd>
-                    </dl>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white overflow-hidden shadow rounded-lg">
-              <div className="p-5">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <AlertTriangle className="h-8 w-8 text-red-600" />
-                  </div>
-                  <div className="ml-5 w-0 flex-1">
-                    <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">Alerts</dt>
-                      <dd className="text-lg font-medium text-gray-900">{stats.alertsCount}</dd>
-                    </dl>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <DashboardStats
+            stats={{
+              ...stats,
+              totalDoctors: stats.totalDoctors || doctorsData.length,
+            }}
+            userRole={user?.role}
+            selectedHospitalId={selectedHospitalId}
+          />
 
           {/* Charts Section */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
@@ -516,7 +376,7 @@ export default function Dashboard() {
                       fill="#8884d8"
                       dataKey="count"
                     >
-                      {sentimentData.map((entry, index) => (
+                      {sentimentData.map((_, index) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
@@ -622,7 +482,6 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
-          </>
         </div>
       </Layout>
     </ProtectedRoute>

@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   Building2, 
@@ -10,16 +9,12 @@ import {
   Brain, 
   MessageSquare,
   ArrowRight,
-  CheckCircle,
   Star,
-  Heart,
-  Activity,
-  TrendingUp
+  Heart
 } from 'lucide-react';
 
 export default function LandingPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('');
 
   const features = [
     {

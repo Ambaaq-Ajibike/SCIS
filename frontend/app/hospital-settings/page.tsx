@@ -1,10 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { hospitalSettingsService, hospitalService, HospitalSettingsDto, CreateHospitalSettingsDto, UpdateHospitalSettingsDto, EndpointValidationDto, HospitalDto, EndpointParameterDto } from '@/lib/api';
+import { hospitalSettingsService, hospitalService, HospitalSettingsDto, UpdateHospitalSettingsDto, HospitalDto } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import Layout from '../../components/Layout';
-import EndpointParameterConfig from '../../components/EndpointParameterConfig';
 import DataRequestEndpointManager from '../../components/DataRequestEndpointManager';
 import { toast } from 'react-toastify';
 
@@ -34,15 +33,8 @@ export default function HospitalSettingsPage() {
   const [selectedHospitalId, setSelectedHospitalId] = useState<string>('');
   const [settings, setSettings] = useState<HospitalSettingsDto | null>(null);
   const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [validating, setValidating] = useState<string | null>(null);
-  const [validationResults, setValidationResults] = useState<EndpointValidationDto[]>([]);
-  const [showFullResponse, setShowFullResponse] = useState<string | null>(null);
 
-  // Form state
-  const [formData, setFormData] = useState<UpdateHospitalSettingsDto>({});
-  const [apiKey, setApiKey] = useState('');
-  const [authToken, setAuthToken] = useState('');
+  // Remove setMessage calls - use toast instead
 
   useEffect(() => {
     loadHospitals();
@@ -70,7 +62,10 @@ export default function HospitalSettingsPage() {
       }
     } catch (error) {
       console.error('Error loading hospitals:', error);
-      setMessage({ type: 'error', text: 'Failed to load hospitals' });
+      toast.error('Failed to load hospitals', {
+        position: "top-right",
+        autoClose: 4000,
+      });
     }
   };
 
@@ -79,189 +74,15 @@ export default function HospitalSettingsPage() {
     try {
       const data = await hospitalSettingsService.getHospitalSettings(hospitalId);
       setSettings(data);
-      
-      // Populate form data
-      const formData: UpdateHospitalSettingsDto = {};
-      ENDPOINT_FIELDS.forEach(field => {
-        const value = data[field.key as keyof HospitalSettingsDto] as string;
-        if (value) {
-          formData[field.key] = value;
-        }
-      });
-      setFormData(formData);
-      setApiKey(data.apiKey || '');
-      setAuthToken(data.authToken || '');
     } catch (error) {
       console.error('Error loading hospital settings:', error);
-      setMessage({ type: 'error', text: 'Failed to load hospital settings' });
+      toast.error('Failed to load hospital settings', {
+        position: "top-right",
+        autoClose: 4000,
+      });
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleInputChange = (field: keyof UpdateHospitalSettingsDto, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
-  const handleSave = async () => {
-    if (!selectedHospitalId) return;
-
-    setSaving(true);
-    try {
-      const updateData: UpdateHospitalSettingsDto = {
-        ...formData,
-        apiKey: apiKey || undefined,
-        authToken: authToken || undefined
-      };
-
-      let updatedSettings: HospitalSettingsDto;
-      if (settings) {
-        updatedSettings = await hospitalSettingsService.updateHospitalSettings(selectedHospitalId, updateData);
-      } else {
-        const createData: CreateHospitalSettingsDto = {
-          hospitalId: selectedHospitalId,
-          ...updateData
-        };
-        updatedSettings = await hospitalSettingsService.createHospitalSettings(createData);
-      }
-
-      setSettings(updatedSettings);
-      toast.success('Hospital settings saved successfully! ✅', {
-        position: "top-right",
-        autoClose: 4000,
-      });
-    } catch (error) {
-      console.error('Error saving settings:', error);
-      toast.error('Failed to save settings. Please try again.', {
-        position: "top-right",
-        autoClose: 4000,
-      });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-          const handleValidateEndpoint = async (endpointUrl: string, endpointType: string) => {
-            if (!endpointUrl.trim()) return;
-
-            setValidating(endpointType);
-            try {
-              // Build the URL with parameters using the same logic as the preview
-              let actualUrl = endpointUrl;
-              const parameters = parseParameters(formData.patientEverythingEndpointParameters);
-              
-              // Replace template placeholders with example values
-              parameters.forEach(param => {
-                if (param.templatePlaceholder && param.example) {
-                  actualUrl = actualUrl.replace(param.templatePlaceholder, param.example);
-                }
-              });
-              
-              const result = await hospitalSettingsService.validateEndpoint(actualUrl, endpointType);
-      setValidationResults(prev => {
-        const filtered = prev.filter(r => r.endpointType !== endpointType);
-        return [...filtered, result];
-      });
-      
-      // Update the settings object with the new validation status
-      if (settings) {
-        const updatedSettings = { ...settings };
-        
-        // Map endpoint types to validation keys
-        const validationKeyMap: Record<string, keyof HospitalSettingsDto> = {
-          'PatientEverything': 'isPatientEverythingEndpointValid'
-        };
-        
-        const validationKey = validationKeyMap[endpointType];
-        if (validationKey) {
-          (updatedSettings as any)[validationKey] = result.isValid;
-        }
-        
-        updatedSettings.lastValidationDate = new Date().toISOString();
-        updatedSettings.lastValidationError = result.isValid ? null : result.errorMessage || 'Validation failed';
-        setSettings(updatedSettings);
-      }
-      
-      if (result.isValid) {
-        toast.success(`${endpointType} endpoint validated successfully! ✅`, {
-          position: "top-right",
-          autoClose: 4000,
-        });
-      } else {
-        toast.error(`${endpointType} endpoint validation failed: ${result.errorMessage}`, {
-          position: "top-right",
-          autoClose: 6000,
-        });
-      }
-    } catch (error) {
-      console.error('Error validating endpoint:', error);
-      toast.error('Failed to validate endpoint. Please try again.', {
-        position: "top-right",
-        autoClose: 4000,
-      });
-    } finally {
-      setValidating(null);
-    }
-  };
-
-  const handleValidateAll = async () => {
-    if (!selectedHospitalId) return;
-
-    setValidating('all');
-    try {
-      const updatedSettings = await hospitalSettingsService.validateAllEndpoints(selectedHospitalId);
-      setSettings(updatedSettings);
-      
-      // Count successful validations
-      const validCount = updatedSettings.isPatientEverythingEndpointValid ? 1 : 0;
-      
-      toast.success(`All endpoints validated! ${validCount} endpoints are working correctly. ✅`, {
-        position: "top-right",
-        autoClose: 5000,
-      });
-    } catch (error) {
-      console.error('Error validating all endpoints:', error);
-      toast.error('Failed to validate endpoints. Please try again.', {
-        position: "top-right",
-        autoClose: 4000,
-      });
-    } finally {
-      setValidating(null);
-    }
-  };
-
-  const getValidationStatus = (field: EndpointField) => {
-    if (!settings) return null;
-    const isValid = settings[field.validationKey] as boolean;
-    return isValid;
-  };
-
-  const getValidationResult = (endpointType: string) => {
-    return validationResults.find(r => r.endpointType === endpointType);
-  };
-
-  const parseParameters = (parameterString: string | undefined): EndpointParameterDto[] => {
-    if (!parameterString) return [];
-    try {
-      return JSON.parse(parameterString);
-    } catch {
-      return [];
-    }
-  };
-
-  const stringifyParameters = (parameters: EndpointParameterDto[]): string => {
-    return JSON.stringify(parameters);
-  };
-
-  const handleParametersChange = (field: EndpointField, parameters: EndpointParameterDto[]) => {
-    const parameterString = stringifyParameters(parameters);
-    setFormData(prev => ({
-      ...prev,
-      [field.parameterKey]: parameterString
-    }));
   };
 
   const selectedHospital = hospitals.find(h => h.id === selectedHospitalId);

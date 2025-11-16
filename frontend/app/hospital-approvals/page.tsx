@@ -14,9 +14,6 @@ interface PendingHospital {
   email: string;
   licenseNumber?: string;
   createdAt: string;
-  contactPersonName?: string;
-  contactPersonEmail?: string;
-  contactPersonPhone?: string;
   verificationDocuments?: string;
   verificationNotes?: string;
 }
@@ -119,7 +116,6 @@ export default function HospitalApprovalsPage() {
 
                   <div className="space-y-2 text-sm">
                     <p><span className="font-medium">Address:</span> {hospital.address}</p>
-                    <p><span className="font-medium">Email:</span> {hospital.email}</p>
                     {hospital.phoneNumber && (
                       <p><span className="font-medium">Phone:</span> {hospital.phoneNumber}</p>
                     )}
@@ -155,7 +151,7 @@ export default function HospitalApprovalsPage() {
           {selectedHospital && (
             <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
               <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-                <div className="mt-3">
+                <div className="mt-3 text-black">
                   <h3 className="text-lg font-medium text-gray-900 mb-4">Hospital Details</h3>
                   <div className="space-y-3 text-sm">
                     <div>
@@ -163,9 +159,6 @@ export default function HospitalApprovalsPage() {
                     </div>
                     <div>
                       <span className="font-medium">Address:</span> {selectedHospital.address}
-                    </div>
-                    <div>
-                      <span className="font-medium">Email:</span> {selectedHospital.email}
                     </div>
                     {selectedHospital.phoneNumber && (
                       <div>
@@ -175,16 +168,6 @@ export default function HospitalApprovalsPage() {
                     {selectedHospital.licenseNumber && (
                       <div>
                         <span className="font-medium">License:</span> {selectedHospital.licenseNumber}
-                      </div>
-                    )}
-                    {selectedHospital.contactPersonName && (
-                      <div>
-                        <span className="font-medium">Contact Person:</span> {selectedHospital.contactPersonName}
-                      </div>
-                    )}
-                    {selectedHospital.contactPersonEmail && (
-                      <div>
-                        <span className="font-medium">Contact Email:</span> {selectedHospital.contactPersonEmail}
                       </div>
                     )}
                     {selectedHospital.verificationDocuments && (

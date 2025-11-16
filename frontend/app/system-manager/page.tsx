@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth';
-import { systemManagerService, SystemManagerDashboard, HospitalAnalytics, HospitalDetail } from '@/lib/api';
+import { systemManagerService, SystemManagerDashboard, HospitalDetail } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 
 export default function SystemManagerPage() {
@@ -54,23 +54,6 @@ export default function SystemManagerPage() {
       console.error('Hospital detail load error:', err);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString();
-  };
-
-  const formatNumber = (num: number) => {
-    return num.toLocaleString();
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'approved': return 'text-green-600 bg-green-100';
-      case 'pending': return 'text-yellow-600 bg-yellow-100';
-      case 'denied': return 'text-red-600 bg-red-100';
-      default: return 'text-gray-600 bg-gray-100';
     }
   };
 
@@ -178,6 +161,15 @@ function SystemOverviewTab({
   onHospitalSelect: (hospitalId: string) => void;
 }) {
   const { systemAnalytics, hospitalAnalytics, topPerformingDoctors, recentDataRequests, recentFeedbacks } = dashboard;
+
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'approved': return 'text-green-600 bg-green-100';
+      case 'pending': return 'text-yellow-600 bg-yellow-100';
+      case 'denied': return 'text-red-600 bg-red-100';
+      default: return 'text-gray-600 bg-gray-100';
+    }
+  };
 
   return (
     <div className="space-y-8">
@@ -404,7 +396,16 @@ function HospitalDetailTab({
   hospitalDetail: HospitalDetail;
   onBack: () => void;
 }) {
-  const { hospitalInfo, doctors, patients, dataRequests, feedbacks } = hospitalDetail;
+  const { hospitalInfo, doctors, dataRequests } = hospitalDetail;
+
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'approved': return 'text-green-600 bg-green-100';
+      case 'pending': return 'text-yellow-600 bg-yellow-100';
+      case 'denied': return 'text-red-600 bg-red-100';
+      default: return 'text-gray-600 bg-gray-100';
+    }
+  };
 
   return (
     <div className="space-y-8">
@@ -576,13 +577,4 @@ function formatNumber(num: number): string {
 
 function formatDate(dateString: string): string {
   return new Date(dateString).toLocaleDateString();
-}
-
-function getStatusColor(status: string): string {
-  switch (status.toLowerCase()) {
-    case 'approved': return 'text-green-600 bg-green-100';
-    case 'pending': return 'text-yellow-600 bg-yellow-100';
-    case 'denied': return 'text-red-600 bg-red-100';
-    default: return 'text-gray-600 bg-gray-100';
-  }
 }

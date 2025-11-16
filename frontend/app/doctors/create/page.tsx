@@ -6,6 +6,7 @@ import { UserPlus, Eye, EyeOff, Loader2, CheckCircle } from 'lucide-react';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import Layout from '@/components/Layout';
 import { onboardingService } from '@/lib/api';
+import { Input } from '@/components/ui/Input';
 
 export default function CreateDoctorPage() {
   const router = useRouter();
@@ -73,77 +74,59 @@ export default function CreateDoctorPage() {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="bg-white shadow rounded-lg p-6 space-y-6">
-              <div>
-                <label htmlFor="username" className="block text-sm font-medium text-gray-700">
-                  Username *
-                </label>
-                <input
-                  type="text"
-                  name="username"
-                  id="username"
-                  required
-                  value={formData.username}
-                  onChange={handleChange}
-                  className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                />
-              </div>
+              <Input
+                type="text"
+                name="username"
+                id="username"
+                label="Username"
+                required
+                value={formData.username}
+                onChange={handleChange}
+              />
 
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                  Email *
-                </label>
-                <input
-                  type="email"
-                  name="email"
-                  id="email"
-                  required
-                  value={formData.email}
-                  onChange={handleChange}
-                  className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                />
-              </div>
+              <Input
+                type="email"
+                name="email"
+                id="email"
+                label="Email"
+                required
+                value={formData.email}
+                onChange={handleChange}
+              />
 
-              <div className="relative">
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                  Password *
-                </label>
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  name="password"
-                  id="password"
-                  required
-                  minLength={6}
-                  value={formData.password}
-                  onChange={handleChange}
-                  className="mt-1 block w-full pr-10 border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                />
-                <button
-                  type="button"
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-5 w-5 text-gray-400" />
-                  ) : (
-                    <Eye className="h-5 w-5 text-gray-400" />
-                  )}
-                </button>
-              </div>
+              <Input
+                type={showPassword ? 'text' : 'password'}
+                name="password"
+                id="password"
+                label="Password"
+                required
+                minLength={6}
+                value={formData.password}
+                onChange={handleChange}
+                rightIcon={
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="cursor-pointer text-gray-400 hover:text-gray-600"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-5 w-5" />
+                    ) : (
+                      <Eye className="h-5 w-5" />
+                    )}
+                  </button>
+                }
+              />
 
-              <div>
-                <label htmlFor="specialty" className="block text-sm font-medium text-gray-700">
-                  Specialty
-                </label>
-                <input
-                  type="text"
-                  name="specialty"
-                  id="specialty"
-                  value={formData.specialty}
-                  onChange={handleChange}
-                  placeholder="e.g., Cardiology, Pediatrics"
-                  className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                />
-              </div>
+              <Input
+                type="text"
+                name="specialty"
+                id="specialty"
+                label="Specialty"
+                value={formData.specialty}
+                onChange={handleChange}
+                placeholder="e.g., Cardiology, Pediatrics"
+              />
 
               {error && (
                 <div className="rounded-md bg-red-50 p-4">

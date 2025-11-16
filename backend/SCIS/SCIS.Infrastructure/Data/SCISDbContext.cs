@@ -130,9 +130,6 @@ public class SCISDbContext : DbContext
             entity.Property(e => e.LicenseNumber).HasMaxLength(50);
             entity.Property(e => e.VerificationDocuments).HasMaxLength(500);
             entity.Property(e => e.VerificationNotes).HasMaxLength(1000);
-            entity.Property(e => e.ContactPersonName).HasMaxLength(200);
-            entity.Property(e => e.ContactPersonEmail).HasMaxLength(100);
-            entity.Property(e => e.ContactPersonPhone).HasMaxLength(20);
         });
 
         // HospitalSettings configuration
