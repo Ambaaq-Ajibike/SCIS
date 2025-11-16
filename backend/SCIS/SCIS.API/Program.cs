@@ -103,12 +103,39 @@ builder.Services.AddScoped<IOnboardingService, OnboardingService>();
 builder.Services.AddHttpClient<IEmailService, EmailService>((serviceProvider, httpClient) =>
 {
     var configuration = serviceProvider.GetRequiredService<IConfiguration>();
-    var apiKey = configuration["Brevo:ApiKey"];
-    if (!string.IsNullOrEmpty(apiKey))
+    var apiKey = configuration["Brevo:ApiKey"]?.Trim();
+    
+    if (string.IsNullOrWhiteSpace(apiKey))
     {
-        httpClient.DefaultRequestHeaders.Add("api-key", apiKey);
-        httpClient.DefaultRequestHeaders.Add("accept", "application/json");
+        throw new InvalidOperationException("Brevo API Key not configured in appsettings.json");
     }
+    
+    // Validate API key format
+    if (!apiKey.StartsWith("xkeysib-"))
+    {
+        throw new InvalidOperationException("Invalid Brevo API Key format. API key must start with 'xkeysib-'");
+    }
+    
+    // Set headers - this is the primary location for header configuration
+    // Remove existing api-key header if present (defensive)
+    if (httpClient.DefaultRequestHeaders.Contains("api-key"))
+    {
+        httpClient.DefaultRequestHeaders.Remove("api-key");
+    }
+    if (httpClient.DefaultRequestHeaders.Contains("accept"))
+    {
+        httpClient.DefaultRequestHeaders.Remove("accept");
+    }
+    
+    // Add headers
+    httpClient.DefaultRequestHeaders.Add("api-key", apiKey);
+    httpClient.DefaultRequestHeaders.Add("accept", "application/json");
+    
+    // Set base address if needed
+    httpClient.BaseAddress = new Uri("https://api.brevo.com");
+    
+    // Set timeout
+    httpClient.Timeout = TimeSpan.FromSeconds(30);
 });
 builder.Services.AddHttpClient<FhirValidationService>();
 builder.Services.AddHttpClient<DataRequestService>();

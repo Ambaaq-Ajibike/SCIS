@@ -158,5 +158,32 @@ public class OnboardingController : ControllerBase
             return StatusCode(500, new { message = "An error occurred while retrieving the hospital", error = ex.Message });
         }
     }
+
+    [HttpGet("my-hospital")]
+    [Authorize(Roles = "HospitalManager")]
+    public async Task<ActionResult<HospitalDto>> GetMyHospital()
+    {
+        try
+        {
+            var hospitalIdClaim = User.FindFirst("hospitalId")?.Value;
+            if (string.IsNullOrEmpty(hospitalIdClaim) || !Guid.TryParse(hospitalIdClaim, out var hospitalId))
+            {
+                return BadRequest(new { message = "Invalid hospital ID" });
+            }
+
+            var hospital = await _onboardingService.GetHospitalByIdAsync(hospitalId);
+            if (hospital == null)
+            {
+                return NotFound(new { message = "Hospital not found" });
+            }
+
+            return Ok(hospital);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting hospital");
+            return StatusCode(500, new { message = "An error occurred while retrieving the hospital", error = ex.Message });
+        }
+    }
 }
 

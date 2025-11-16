@@ -120,6 +120,7 @@ export const API_ENDPOINTS = {
     APPROVE: '/datarequest/approve',
     PENDING: '/datarequest/pending',
     HISTORY: '/datarequest/history',
+    CHECK_AVAILABILITY: '/datarequest/check-availability',
   },
   FEEDBACK: {
     SUBMIT: '/feedback/submit',
@@ -153,6 +154,7 @@ export const API_ENDPOINTS = {
     APPROVE_HOSPITAL: '/onboarding/approve-hospital',
     PENDING_HOSPITALS: '/onboarding/pending-hospitals',
     HOSPITAL: (id: string) => `/onboarding/hospital/${id}`,
+    MY_HOSPITAL: '/onboarding/my-hospital',
   },
 } as const;
 

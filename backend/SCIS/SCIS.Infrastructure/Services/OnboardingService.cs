@@ -191,7 +191,7 @@ public class OnboardingService : IOnboardingService
                 hospital.VerificationNotes = notes;
             }
 
-            await _context.SaveChangesAsync();
+           
 
             _logger.LogInformation("Hospital {HospitalId} approval status changed to {IsApproved} by {UserId}", 
                 hospitalId, isApproved, approvedByUserId);
@@ -241,7 +241,7 @@ public class OnboardingService : IOnboardingService
                     _logger.LogWarning("No active HospitalManager found for hospital {HospitalId} - cannot send approval email", hospitalId);
                 }
             }
-
+            await _context.SaveChangesAsync();
             return true;
         }
         catch (Exception ex)

@@ -12,5 +12,6 @@ public interface IDataRequestService
     Task<bool> ValidateRoleAsync(Guid userId, string dataType);
     Task<string> FormatAsFHIRAsync(Guid patientId, string dataType);
     Task<string> CallPatientEndpointAsync(string patientId, string patientHospitalId, string dataType);
+    Task<DataAvailabilityResponseDto> CheckDataAvailabilityAsync(DataRequestDto request, Guid requestingUserId);
     Task LogDataRequestAsync(Guid requestId, bool success, int responseTimeMs, string? errorMessage = null);
 }

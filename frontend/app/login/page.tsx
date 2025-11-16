@@ -1,21 +1,33 @@
 'use client';
 
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { LoginForm } from '@/components/features';
 import { ROUTES } from '@/constants';
+import { toast } from 'react-toastify';
 
 export default function LoginPage() {
   const { login, isLoading } = useAuth();
   const router = useRouter();
+  const [error, setError] = useState<string>('');
 
   const handleSubmit = async (email: string, password: string): Promise<boolean> => {
-    const success = await login(email, password);
-    if (success) {
+    setError('');
+    const result = await login(email, password);
+    if (result.success) {
       router.push(ROUTES.DASHBOARD);
       return true;
+    } else {
+      const errorMessage = result.error || 'Invalid credentials. Please try again.';
+      setError(errorMessage);
+      // Show error in toast notification
+      toast.error(errorMessage, {
+        autoClose: 5000,
+        position: 'top-right',
+      });
+      return false;
     }
-    return false;
   };
 
   return (
@@ -24,6 +36,7 @@ export default function LoginPage() {
       subtitle="Smart Connected Integrated System"
       onSubmit={handleSubmit}
       isLoading={isLoading}
+      error={error}
       footerContent={
         <div>
           <p className="text-sm text-gray-600">

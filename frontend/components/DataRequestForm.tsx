@@ -7,7 +7,9 @@ import {
   Building2, 
   Send,
   AlertCircle,
-  CheckCircle
+  CheckCircle,
+  Search,
+  Loader2
 } from 'lucide-react';
 import { dataRequestService } from '@/lib/api';
 import { Input } from '@/components/ui/Input';
@@ -24,6 +26,8 @@ export default function DataRequestForm({ onRequestSubmitted, onIntraHospitalSuc
     purpose: ''
   });
   const [loading, setLoading] = useState(false);
+  const [checkingAvailability, setCheckingAvailability] = useState(false);
+  const [availabilityStatus, setAvailabilityStatus] = useState<{ isAvailable: boolean; message?: string; patientHospitalName?: string; patientName?: string; isCrossHospitalRequest?: boolean } | null>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [availableDataTypes, setAvailableDataTypes] = useState<string[]>([]);
 
@@ -131,6 +135,64 @@ export default function DataRequestForm({ onRequestSubmitted, onIntraHospitalSuc
       ...prev,
       [name]: value
     }));
+    // Clear availability status when form data changes
+    if (name === 'patientId' || name === 'dataType') {
+      setAvailabilityStatus(null);
+      setMessage(null);
+    }
+  };
+
+  const handleCheckAvailability = async () => {
+    if (!formData.patientId || !formData.dataType) {
+      setMessage({
+        type: 'error',
+        text: 'Please enter a patient ID and select a data type before checking availability.'
+      });
+      return;
+    }
+
+    setCheckingAvailability(true);
+    setAvailabilityStatus(null);
+    setMessage(null);
+
+    try {
+      const response = await dataRequestService.checkAvailability({
+        patientId: formData.patientId,
+        dataType: formData.dataType,
+        purpose: formData.purpose || undefined
+      });
+
+      setAvailabilityStatus({
+        isAvailable: response.isAvailable,
+        message: response.message,
+        patientHospitalName: response.patientHospitalName,
+        patientName: response.patientName,
+        isCrossHospitalRequest: response.isCrossHospitalRequest
+      });
+
+      if (response.isAvailable) {
+        setMessage({
+          type: 'success',
+          text: `Data is available! ${response.patientName ? `Patient: ${response.patientName}` : ''} ${response.patientHospitalName ? `(${response.patientHospitalName})` : ''}. You can now submit your request.`
+        });
+      } else {
+        setMessage({
+          type: 'error',
+          text: response.message || 'Data is not available. Please check the patient ID and data type.'
+        });
+      }
+    } catch (error: any) {
+      setAvailabilityStatus({
+        isAvailable: false,
+        message: error.response?.data?.message || 'Failed to check data availability. Please try again.'
+      });
+      setMessage({
+        type: 'error',
+        text: error.response?.data?.message || 'Failed to check data availability. Please try again.'
+      });
+    } finally {
+      setCheckingAvailability(false);
+    }
   };
 
   return (
@@ -200,6 +262,68 @@ export default function DataRequestForm({ onRequestSubmitted, onIntraHospitalSuc
             </p>
           </div>
 
+          {/* Check Availability Button */}
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={handleCheckAvailability}
+              disabled={checkingAvailability || !formData.patientId || !formData.dataType}
+              className="inline-flex items-center px-4 py-2 border border-primary-600 text-sm font-medium rounded-md text-primary-600 bg-white hover:bg-primary-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {checkingAvailability ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Checking...
+                </>
+              ) : (
+                <>
+                  <Search className="h-4 w-4 mr-2" />
+                  Check Data Availability
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Availability Status */}
+          {availabilityStatus && (
+            <div className={`p-4 rounded-md border ${
+              availabilityStatus.isAvailable
+                ? 'bg-green-50 border-green-200'
+                : 'bg-yellow-50 border-yellow-200'
+            }`}>
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  {availabilityStatus.isAvailable ? (
+                    <CheckCircle className="h-5 w-5 text-green-400" />
+                  ) : (
+                    <AlertCircle className="h-5 w-5 text-yellow-400" />
+                  )}
+                </div>
+                <div className="ml-3 flex-1">
+                  <h4 className={`text-sm font-medium ${
+                    availabilityStatus.isAvailable ? 'text-green-800' : 'text-yellow-800'
+                  }`}>
+                    {availabilityStatus.isAvailable ? 'Data Available' : 'Data Not Available'}
+                  </h4>
+                  <p className={`mt-1 text-sm ${
+                    availabilityStatus.isAvailable ? 'text-green-700' : 'text-yellow-700'
+                  }`}>
+                    {availabilityStatus.message}
+                  </p>
+                  {availabilityStatus.patientName && (
+                    <p className={`mt-1 text-xs ${
+                      availabilityStatus.isAvailable ? 'text-green-600' : 'text-yellow-600'
+                    }`}>
+                      Patient: {availabilityStatus.patientName}
+                      {availabilityStatus.patientHospitalName && ` • Hospital: ${availabilityStatus.patientHospitalName}`}
+                      {availabilityStatus.isCrossHospitalRequest && ' • Cross-hospital request'}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Message Display */}
           {message && (
             <div className={`p-4 rounded-md ${
@@ -230,7 +354,7 @@ export default function DataRequestForm({ onRequestSubmitted, onIntraHospitalSuc
           <div className="flex justify-end">
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !availabilityStatus?.isAvailable}
               className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
@@ -246,6 +370,11 @@ export default function DataRequestForm({ onRequestSubmitted, onIntraHospitalSuc
               )}
             </button>
           </div>
+          {!availabilityStatus?.isAvailable && availabilityStatus !== null && (
+            <p className="text-sm text-gray-500 text-right mt-2">
+              Please check data availability before submitting
+            </p>
+          )}
         </form>
       </div>
     </div>

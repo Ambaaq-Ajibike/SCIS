@@ -16,10 +16,24 @@ public class EmailService : IEmailService
     {
         _httpClient = httpClient;
         _configuration = configuration;
-        _brevoApiKey = _configuration["Brevo:ApiKey"] ?? throw new InvalidOperationException("Brevo API Key not configured");
+        _brevoApiKey = _configuration["Brevo:ApiKey"]?.Trim() ?? throw new InvalidOperationException("Brevo API Key not configured");
         
-        _httpClient.DefaultRequestHeaders.Add("api-key", _brevoApiKey);
-        _httpClient.DefaultRequestHeaders.Add("accept", "application/json");
+        // Validate API key format
+        if (string.IsNullOrWhiteSpace(_brevoApiKey) || !_brevoApiKey.StartsWith("xkeysib-"))
+        {
+            throw new InvalidOperationException("Invalid Brevo API Key format. API key must start with 'xkeysib-'");
+        }
+        
+        // Note: Headers should be set in Program.cs during HttpClient registration
+        // Only set headers here if they weren't already set (defensive check)
+        if (!_httpClient.DefaultRequestHeaders.Contains("api-key"))
+        {
+            _httpClient.DefaultRequestHeaders.Add("api-key", _brevoApiKey);
+        }
+        if (!_httpClient.DefaultRequestHeaders.Contains("accept"))
+        {
+            _httpClient.DefaultRequestHeaders.Add("accept", "application/json");
+        }
     }
 
     public async Task<bool> SendPatientSignupEmailAsync(string patientEmail, string patientName, string patientId, string hospitalName)
@@ -45,12 +59,27 @@ public class EmailService : IEmailService
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
             var response = await _httpClient.PostAsync(_brevoApiUrl, content);
+            
+            if (!response.IsSuccessStatusCode)
+            {
+                var responseContent = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"Email send failed. Status: {response.StatusCode}, Response: {responseContent}");
+                Console.WriteLine($"Request URL: {_brevoApiUrl}");
+                Console.WriteLine($"API Key format valid: {(_brevoApiKey.StartsWith("xkeysib-") ? "Yes" : "NO - INVALID FORMAT")}");
+                Console.WriteLine($"API Key length: {_brevoApiKey.Length} characters");
+            }
+            
             return response.IsSuccessStatusCode;
         }
         catch (Exception ex)
         {
-            // Log the exception
+            // Log the exception with full details
             Console.WriteLine($"Error sending email: {ex.Message}");
+            Console.WriteLine($"Stack trace: {ex.StackTrace}");
+            if (ex.InnerException != null)
+            {
+                Console.WriteLine($"Inner exception: {ex.InnerException.Message}");
+            }
             return false;
         }
     }
@@ -132,11 +161,19 @@ public class EmailService : IEmailService
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
             var response = await _httpClient.PostAsync(_brevoApiUrl, content);
+            
+            if (!response.IsSuccessStatusCode)
+            {
+                var responseContent = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"Data request notification email send failed. Status: {response.StatusCode}, Response: {responseContent}");
+            }
+            
             return response.IsSuccessStatusCode;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Error sending data request notification email: {ex.Message}");
+            Console.WriteLine($"Stack trace: {ex.StackTrace}");
             return false;
         }
     }
@@ -164,11 +201,19 @@ public class EmailService : IEmailService
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
             var response = await _httpClient.PostAsync(_brevoApiUrl, content);
+            
+            if (!response.IsSuccessStatusCode)
+            {
+                var responseContent = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"Data request approval notification email send failed. Status: {response.StatusCode}, Response: {responseContent}");
+            }
+            
             return response.IsSuccessStatusCode;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Error sending data request approval notification email: {ex.Message}");
+            Console.WriteLine($"Stack trace: {ex.StackTrace}");
             return false;
         }
     }
@@ -359,13 +404,6 @@ This is an automated message from the SCIS system. Please do not reply to this e
             var fromEmail = _configuration["Brevo:FromEmail"] ?? "noreply@scis.com";
             var fromName = _configuration["Brevo:FromName"] ?? "SCIS System";
             var frontendUrl = _configuration["Frontend:BaseUrl"] ?? "http://localhost:3000";
-
-            // Check if Brevo API key is configured
-            if (string.IsNullOrEmpty(_brevoApiKey))
-            {
-                Console.WriteLine("ERROR: Brevo API Key is not configured. Cannot send email.");
-                return false;
-            }
 
             var emailContent = GenerateHospitalApprovalEmail(managerName, hospitalName, isApproved, notes, frontendUrl);
 

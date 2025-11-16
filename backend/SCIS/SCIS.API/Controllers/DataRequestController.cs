@@ -102,6 +102,24 @@ public class DataRequestController : ControllerBase
         }
     }
 
+    [HttpPost("check-availability")]
+    public async Task<ActionResult<DataAvailabilityResponseDto>> CheckDataAvailability([FromBody] DataRequestDto request)
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            if (userId == Guid.Empty)
+                return Unauthorized(new { message = "Invalid user" });
+
+            var response = await _dataRequestService.CheckDataAvailabilityAsync(request, userId);
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "An error occurred while checking data availability", error = ex.Message });
+        }
+    }
+
     private Guid GetCurrentUserId()
     {
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;

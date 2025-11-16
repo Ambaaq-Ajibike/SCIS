@@ -64,15 +64,15 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({
         iconColor="text-green-600"
       />
 
-      <StatCard
+      {/* <StatCard
         title="Avg TES"
         value={`${stats.averageTES}%`}
         icon={Activity}
         iconColor="text-blue-600"
-      />
+      /> */}
 
       <StatCard
-        title="Interop Rate"
+        title="Network Interop"
         value={`${stats.interoperabilityRate}%`}
         icon={TrendingUp}
         iconColor="text-purple-600"

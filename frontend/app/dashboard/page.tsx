@@ -18,7 +18,13 @@ import {
 import { 
   UserCheck,
   AlertTriangle,
-  TrendingUp
+  TrendingUp,
+  Network,
+  Shield,
+  Activity,
+  Database,
+  Link2,
+  CheckCircle2
 } from 'lucide-react';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import Layout from '@/components/Layout';
@@ -267,21 +273,21 @@ export default function Dashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Header */}
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900">
-              {user?.role === 'HospitalManager' 
-                ? `${stats.hospitalName || 'Hospital'} Dashboard`
-                : user?.role === 'SystemManager' && selectedHospitalId
-                ? `${hospitals.find(h => h.hospitalId === selectedHospitalId)?.hospitalName || 'Hospital'} Dashboard`
-                : 'System Dashboard'}
-            </h1>
-            <p className="mt-2 text-gray-600">
-              {user?.role === 'HospitalManager' 
-                ? 'Overview of your hospital\'s performance and key metrics'
-                : user?.role === 'SystemManager' && selectedHospitalId
-                ? 'Overview of doctor performance and key metrics for this hospital'
-                : 'System-wide overview of all hospitals and performance metrics'
-              }
-            </p>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="mt-1 text-sm font-semibold text-primary-600">
+                  Smart Connected System for Integrated Health Administration
+                </p>
+                <p className="mt-2 text-gray-600">
+                  {user?.role === 'HospitalManager' 
+                    ? `Monitoring ${stats.hospitalName || 'your hospital'}'s integration within the decentralized healthcare network`
+                    : user?.role === 'SystemManager' && selectedHospitalId
+                    ? `Analyzing ${hospitals.find(h => h.hospitalId === selectedHospitalId)?.hospitalName || 'hospital'}'s performance in the interoperable network`
+                    : 'National healthcare network overview - Real-time coordination and service delivery across integrated health institutions'
+                  }
+                </p>
+              </div>
+            </div>
           </div>
 
           {/* Hospital Filter for SystemManager */}
@@ -314,8 +320,8 @@ export default function Dashboard() {
               <div className="px-4 py-5 sm:p-6">
                 <h3 className="text-lg font-medium text-gray-900 mb-4">
                   {(user?.role === 'HospitalManager' || (user?.role === 'SystemManager' && selectedHospitalId)) 
-                    ? 'Doctor TES Performance' 
-                    : 'Hospital TES Performance Comparison'}
+                    ? 'Healthcare Provider Performance Metrics' 
+                    : 'Institution Performance Comparison - Treatment Evaluation Scores'}
                 </h3>
                 <ResponsiveContainer width="100%" height={300}>
                   {tesData.length > 0 ? (
@@ -343,8 +349,8 @@ export default function Dashboard() {
               <div className="px-4 py-5 sm:p-6">
                 <h3 className="text-lg font-medium text-gray-900 mb-4">
                   {(user?.role === 'HospitalManager' || (user?.role === 'SystemManager' && selectedHospitalId))
-                    ? 'Hospital Patient Volume' 
-                    : 'Patient Volume Trends'}
+                    ? 'Service Delivery Volume' 
+                    : 'Healthcare Service Delivery Trends Across Network'}
                 </h3>
                 <ResponsiveContainer width="100%" height={300}>
                   <LineChart data={volumeData}>
@@ -363,7 +369,7 @@ export default function Dashboard() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
             <div className="bg-white shadow rounded-lg">
               <div className="px-4 py-5 sm:p-6">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Patient Sentiment Distribution</h3>
+                <h3 className="text-lg font-medium text-gray-900 mb-4">Patient Feedback Sentiment Analysis</h3>
                 <ResponsiveContainer width="100%" height={300}>
                   <PieChart>
                     <Pie
@@ -391,8 +397,8 @@ export default function Dashboard() {
               <div className="px-4 py-5 sm:p-6">
                 <h3 className="text-lg font-medium text-gray-900 mb-4">
                   {(user?.role === 'HospitalManager' || (user?.role === 'SystemManager' && selectedHospitalId))
-                    ? 'Doctor Performance Overview' 
-                    : 'Hospital Performance Rankings'}
+                    ? 'Healthcare Provider Performance Overview' 
+                    : 'Institution Performance Rankings - Network Integration'}
                 </h3>
                 <div className="space-y-4">
                   {(user?.role === 'SystemManager' && selectedHospitalId ? doctorsData : hospitalPerformance).map((item: any, index: number) => {
@@ -432,52 +438,108 @@ export default function Dashboard() {
             </div>
           </div>
 
+          {/* Network Integration Status */}
+          <div className="bg-white shadow rounded-lg mb-8">
+            <div className="px-4 py-5 sm:p-6">
+              <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                <Network className="h-5 w-5 mr-2 text-primary-600" />
+                Decentralized Network Integration Status
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-center justify-between mb-2">
+                    <Database className="h-5 w-5 text-blue-600" />
+                    <CheckCircle2 className="h-5 w-5 text-green-600" />
+                  </div>
+                  <h4 className="font-medium text-blue-800 mb-1">Data Exchange</h4>
+                  <p className="text-sm text-blue-700">
+                    {stats.interoperabilityRate.toFixed(1)}% success rate
+                  </p>
+                  <p className="text-xs text-blue-600 mt-1">Error-controlled protocols active</p>
+                </div>
+
+                <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="flex items-center justify-between mb-2">
+                    <Activity className="h-5 w-5 text-green-600" />
+                    <CheckCircle2 className="h-5 w-5 text-green-600" />
+                  </div>
+                  <h4 className="font-medium text-green-800 mb-1">Real-Time Communication</h4>
+                  <p className="text-sm text-green-700">Active</p>
+                  <p className="text-xs text-green-600 mt-1">Service-level architecture operational</p>
+                </div>
+
+                <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                  <div className="flex items-center justify-between mb-2">
+                    <Shield className="h-5 w-5 text-purple-600" />
+                    <CheckCircle2 className="h-5 w-5 text-green-600" />
+                  </div>
+                  <h4 className="font-medium text-purple-800 mb-1">Secure Authentication</h4>
+                  <p className="text-sm text-purple-700">Enabled</p>
+                  <p className="text-xs text-purple-600 mt-1">Discretionary access control active</p>
+                </div>
+
+                <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg">
+                  <div className="flex items-center justify-between mb-2">
+                    <Link2 className="h-5 w-5 text-orange-600" />
+                    <CheckCircle2 className="h-5 w-5 text-green-600" />
+                  </div>
+                  <h4 className="font-medium text-orange-800 mb-1">FHIR Compliance</h4>
+                  <p className="text-sm text-orange-700">Compliant</p>
+                  <p className="text-xs text-orange-600 mt-1">Standards-based interoperability</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Performance Insights */}
           <div className="bg-white shadow rounded-lg">
             <div className="px-4 py-5 sm:p-6">
               <h3 className="text-lg font-medium text-gray-900 mb-4">
                 {(user?.role === 'HospitalManager' || (user?.role === 'SystemManager' && selectedHospitalId))
-                  ? 'Hospital Performance Insights' 
-                  : 'System Performance Insights & Recommendations'}
+                  ? 'Healthcare Institution Performance Insights' 
+                  : 'National Healthcare Network Insights & Recommendations'}
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
                   <div className="flex items-center mb-2">
                     <AlertTriangle className="h-5 w-5 text-red-600 mr-2" />
-                    <h4 className="font-medium text-red-800">Critical Alert</h4>
+                    <h4 className="font-medium text-red-800">Attention Required</h4>
                   </div>
                   <p className="text-sm text-red-700">
                     {(user?.role === 'HospitalManager' || (user?.role === 'SystemManager' && selectedHospitalId))
-                      ? `${stats.alertsCount} doctors below TES threshold (70%)`
-                      : `${stats.alertsCount} doctors across system below TES threshold (70%)`
+                      ? `${stats.alertsCount} healthcare providers below performance threshold (70%)`
+                      : `${stats.alertsCount} providers across network below performance threshold (70%)`
                     }
                   </p>
+                  <p className="text-xs text-red-600 mt-2">Review data exchange protocols and communication mechanisms</p>
                 </div>
 
                 <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                   <div className="flex items-center mb-2">
                     <TrendingUp className="h-5 w-5 text-yellow-600 mr-2" />
-                    <h4 className="font-medium text-yellow-800">Improvement Needed</h4>
+                    <h4 className="font-medium text-yellow-800">Optimization Opportunity</h4>
                   </div>
                   <p className="text-sm text-yellow-700">
                     {(user?.role === 'HospitalManager' || (user?.role === 'SystemManager' && selectedHospitalId))
-                      ? 'Consider additional training for doctors with low TES scores'
-                      : 'Some hospitals need interoperability training'
+                      ? 'Enhance interoperability protocols and real-time communication mechanisms'
+                      : 'Some institutions need enhanced integration training and protocol optimization'
                     }
                   </p>
+                  <p className="text-xs text-yellow-600 mt-2">Focus on service-level architecture improvements</p>
                 </div>
 
                 <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
                   <div className="flex items-center mb-2">
                     <UserCheck className="h-5 w-5 text-green-600 mr-2" />
-                    <h4 className="font-medium text-green-800">Good Performance</h4>
+                    <h4 className="font-medium text-green-800">Network Health</h4>
                   </div>
                   <p className="text-sm text-green-700">
                     {(user?.role === 'HospitalManager' || (user?.role === 'SystemManager' && selectedHospitalId))
-                      ? `Hospital performance index: ${stats.performanceIndex}%`
-                      : 'Overall system health is excellent'
+                      ? `Institution performance index: ${stats.performanceIndex}% - Well integrated`
+                      : 'Overall network health is excellent - Decentralized system operating optimally'
                     }
                   </p>
+                  <p className="text-xs text-green-600 mt-2">Seamless collaboration across healthcare entities</p>
                 </div>
               </div>
             </div>

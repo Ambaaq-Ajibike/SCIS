@@ -512,6 +512,255 @@ public class DataRequestService : IDataRequestService
         return responseContent;
     }
 
+    public async Task<DataAvailabilityResponseDto> CheckDataAvailabilityAsync(DataRequestDto request, Guid requestingUserId)
+    {
+        var startTime = DateTime.UtcNow;
+        
+        try
+        {
+            // Find the requesting user
+            var requestingUser = await _context.Users
+                .Include(u => u.Hospital)
+                .FirstOrDefaultAsync(u => u.Id == requestingUserId);
+
+            if (requestingUser == null)
+            {
+                return new DataAvailabilityResponseDto
+                {
+                    IsAvailable = false,
+                    Message = "Invalid user",
+                    ResponseTimeMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds
+                };
+            }
+
+            // Find the patient and their hospital
+            var patient = await _context.Patients
+                .Include(p => p.Hospital)
+                .FirstOrDefaultAsync(p => p.PatientId == request.PatientId);
+
+            if (patient == null)
+            {
+                return new DataAvailabilityResponseDto
+                {
+                    IsAvailable = false,
+                    Message = "Patient not found",
+                    ResponseTimeMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds
+                };
+            }
+
+            var isCrossHospitalRequest = patient.HospitalId != requestingUser.HospitalId;
+
+            // Check if endpoint exists and is configured
+            var dataRequestEndpoint = await _context.DataRequestEndpoints
+                .FirstOrDefaultAsync(e => e.HospitalId == patient.HospitalId 
+                    && e.DataType == request.DataType 
+                    && e.IsActive);
+
+            HospitalSettings? hospitalSettings = null;
+            
+            // If no specific endpoint, check for PatientEverythingEndpoint
+            if (dataRequestEndpoint == null)
+            {
+                hospitalSettings = await _context.HospitalSettings
+                    .FirstOrDefaultAsync(hs => hs.HospitalId == patient.HospitalId && hs.IsActive);
+
+                if (hospitalSettings == null || string.IsNullOrEmpty(hospitalSettings.PatientEverythingEndpoint))
+                {
+                    return new DataAvailabilityResponseDto
+                    {
+                        IsAvailable = false,
+                        Message = $"No endpoint configured for data type '{request.DataType}' at patient's hospital",
+                        PatientHospitalName = patient.Hospital?.Name,
+                        PatientName = $"{patient.FirstName} {patient.LastName}",
+                        IsCrossHospitalRequest = isCrossHospitalRequest,
+                        ResponseTimeMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds
+                    };
+                }
+            }
+
+            // Try to call the endpoint to check if data is available
+            try
+            {
+                string endpointUrl;
+                if (dataRequestEndpoint != null)
+                {
+                    endpointUrl = dataRequestEndpoint.EndpointUrl.Replace("{patientId}", patient.PatientId);
+                }
+                else if (hospitalSettings != null && !string.IsNullOrEmpty(hospitalSettings.PatientEverythingEndpoint))
+                {
+                    endpointUrl = hospitalSettings.PatientEverythingEndpoint.Replace("{patientId}", patient.PatientId);
+                }
+                else
+                {
+                    return new DataAvailabilityResponseDto
+                    {
+                        IsAvailable = false,
+                        Message = "No endpoint configured for this data type",
+                        PatientHospitalName = patient.Hospital?.Name,
+                        PatientName = $"{patient.FirstName} {patient.LastName}",
+                        IsCrossHospitalRequest = isCrossHospitalRequest,
+                        ResponseTimeMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds
+                    };
+                }
+
+                var httpMethod = dataRequestEndpoint != null && !string.IsNullOrEmpty(dataRequestEndpoint.HttpMethod)
+                    ? (dataRequestEndpoint.HttpMethod.ToUpper() switch
+                    {
+                        "POST" => HttpMethod.Post,
+                        "PUT" => HttpMethod.Put,
+                        "DELETE" => HttpMethod.Delete,
+                        _ => HttpMethod.Get
+                    })
+                    : HttpMethod.Get;
+
+                var checkRequest = new HttpRequestMessage(httpMethod, endpointUrl);
+                
+                // Add authentication headers if configured
+                if (dataRequestEndpoint != null)
+                {
+                    if (!string.IsNullOrEmpty(dataRequestEndpoint.ApiKey))
+                    {
+                        checkRequest.Headers.Add("X-API-Key", dataRequestEndpoint.ApiKey);
+                    }
+                    if (!string.IsNullOrEmpty(dataRequestEndpoint.AuthToken))
+                    {
+                        checkRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", dataRequestEndpoint.AuthToken);
+                    }
+                }
+                else if (hospitalSettings != null)
+                {
+                    if (!string.IsNullOrEmpty(hospitalSettings.ApiKey))
+                    {
+                        checkRequest.Headers.Add("X-API-Key", hospitalSettings.ApiKey);
+                    }
+                    if (!string.IsNullOrEmpty(hospitalSettings.AuthToken))
+                    {
+                        checkRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", hospitalSettings.AuthToken);
+                    }
+                }
+
+                // Set a shorter timeout for availability check
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                var response = await _httpClient.SendAsync(checkRequest, cts.Token);
+                
+                var responseTimeMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
+
+                if (response.IsSuccessStatusCode)
+                {
+                    // Read and parse the response to check if data actually exists
+                    var responseContent = await response.Content.ReadAsStringAsync();
+                    bool hasData = false;
+                    string availabilityMessage = "Data is available and accessible";
+
+                    try
+                    {
+                        // Try to parse as JSON
+                        using var jsonDoc = JsonDocument.Parse(responseContent);
+                        var root = jsonDoc.RootElement;
+
+                        // Check if it's a FHIR Bundle
+                        if (root.TryGetProperty("resourceType", out var resourceType) && 
+                            resourceType.GetString() == "Bundle")
+                        {
+                            // Check if bundle has entries
+                            if (root.TryGetProperty("entry", out var entries) && entries.ValueKind == JsonValueKind.Array)
+                            {
+                                hasData = entries.GetArrayLength() > 0;
+                            }
+                            
+                            // Also check total count
+                            if (root.TryGetProperty("total", out var total))
+                            {
+                                var totalValue = total.GetInt32();
+                                hasData = hasData || totalValue > 0;
+                            }
+
+                            if (!hasData)
+                            {
+                                availabilityMessage = "Endpoint is accessible but returned no data for this patient";
+                            }
+                        }
+                        else
+                        {
+                            // Not a Bundle, check if it's a single resource or has content
+                            hasData = !string.IsNullOrWhiteSpace(responseContent) && 
+                                     responseContent.TrimStart().StartsWith("{");
+                            
+                            if (!hasData)
+                            {
+                                availabilityMessage = "Endpoint returned an empty or invalid response";
+                            }
+                        }
+                    }
+                    catch (JsonException)
+                    {
+                        // If not valid JSON, check if there's any content
+                        hasData = !string.IsNullOrWhiteSpace(responseContent);
+                        if (!hasData)
+                        {
+                            availabilityMessage = "Endpoint returned an empty response";
+                        }
+                    }
+
+                    return new DataAvailabilityResponseDto
+                    {
+                        IsAvailable = hasData,
+                        Message = availabilityMessage,
+                        PatientHospitalName = patient.Hospital?.Name,
+                        PatientName = $"{patient.FirstName} {patient.LastName}",
+                        IsCrossHospitalRequest = isCrossHospitalRequest,
+                        ResponseTimeMs = responseTimeMs
+                    };
+                }
+                else
+                {
+                    return new DataAvailabilityResponseDto
+                    {
+                        IsAvailable = false,
+                        Message = $"Endpoint returned status {response.StatusCode}. Data may not be available.",
+                        PatientHospitalName = patient.Hospital?.Name,
+                        PatientName = $"{patient.FirstName} {patient.LastName}",
+                        IsCrossHospitalRequest = isCrossHospitalRequest,
+                        ResponseTimeMs = responseTimeMs
+                    };
+                }
+            }
+            catch (HttpRequestException ex)
+            {
+                return new DataAvailabilityResponseDto
+                {
+                    IsAvailable = false,
+                    Message = $"Unable to reach endpoint: {ex.Message}",
+                    PatientHospitalName = patient.Hospital?.Name,
+                    PatientName = $"{patient.FirstName} {patient.LastName}",
+                    IsCrossHospitalRequest = isCrossHospitalRequest,
+                    ResponseTimeMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds
+                };
+            }
+            catch (TaskCanceledException)
+            {
+                return new DataAvailabilityResponseDto
+                {
+                    IsAvailable = false,
+                    Message = "Endpoint request timed out. The endpoint may be unavailable.",
+                    PatientHospitalName = patient.Hospital?.Name,
+                    PatientName = $"{patient.FirstName} {patient.LastName}",
+                    IsCrossHospitalRequest = isCrossHospitalRequest,
+                    ResponseTimeMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds
+                };
+            }
+        }
+        catch (Exception ex)
+        {
+            return new DataAvailabilityResponseDto
+            {
+                IsAvailable = false,
+                Message = $"Error checking availability: {ex.Message}",
+                ResponseTimeMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds
+            };
+        }
+    }
+
     private async Task<string> CallSpecificEndpointAsync(string patientId, DataRequestEndpoint endpoint)
     {
         var patient = await _context.Patients.FirstOrDefaultAsync(p => p.PatientId == patientId);

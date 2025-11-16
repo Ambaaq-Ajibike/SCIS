@@ -45,11 +45,11 @@ export const LoginForm: React.FC<LoginFormProps> = ({
     }
 
     const success = await onSubmit(email, password);
-    if (!success) {
-      setLocalError(error || 'Invalid credentials. Please try again.');
-    }
+    // Don't set localError here - let the parent component handle error display via error prop
+    // This ensures the backend error message is properly displayed
   };
 
+  // Prioritize error prop over localError
   const displayError = error || localError;
 
   return (
@@ -88,11 +88,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({
               placeholder={passwordLabel}
             />
           </div>
-
-          {displayError && (
-            <Alert variant="error" message={displayError} />
-          )}
-
           <Button
             type="submit"
             isLoading={isLoading}

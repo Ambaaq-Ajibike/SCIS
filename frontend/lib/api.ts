@@ -70,6 +70,15 @@ export interface DataRequestDto {
   purpose?: string;
 }
 
+export interface DataAvailabilityResponse {
+  isAvailable: boolean;
+  message?: string;
+  patientHospitalName?: string;
+  patientName?: string;
+  isCrossHospitalRequest: boolean;
+  responseTimeMs: number;
+}
+
 export interface DataRequestResponse {
   id: string;
   status: string;
@@ -327,6 +336,11 @@ export const dataRequestService = {
 
   getRequestHistory: async (): Promise<DataRequestResponse[]> => {
     const response = await api.get(API_ENDPOINTS.DATA_REQUEST.HISTORY);
+    return response.data;
+  },
+
+  checkAvailability: async (request: DataRequestDto): Promise<DataAvailabilityResponse> => {
+    const response = await api.post(API_ENDPOINTS.DATA_REQUEST.CHECK_AVAILABILITY, request);
     return response.data;
   },
 };
@@ -642,6 +656,11 @@ export const onboardingService = {
 
   getHospital: async (hospitalId: string): Promise<HospitalDto> => {
     const response = await api.get(API_ENDPOINTS.ONBOARDING.HOSPITAL(hospitalId));
+    return response.data;
+  },
+
+  getMyHospital: async (): Promise<HospitalDto> => {
+    const response = await api.get(API_ENDPOINTS.ONBOARDING.MY_HOSPITAL);
     return response.data;
   },
 };

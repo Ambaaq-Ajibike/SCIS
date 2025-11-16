@@ -6,10 +6,8 @@ import {
   Users, 
   BarChart3, 
   Shield, 
-  Brain, 
   MessageSquare,
   ArrowRight,
-  Star,
   Heart
 } from 'lucide-react';
 
@@ -19,33 +17,33 @@ export default function LandingPage() {
   const features = [
     {
       icon: Building2,
-      title: 'Hospital Management',
-      description: 'Comprehensive hospital administration with real-time performance monitoring'
-    },
-    {
-      icon: Users,
-      title: 'Patient Management',
-      description: 'Secure patient records with biometric consent and FHIR compliance'
-    },
-    {
-      icon: BarChart3,
-      title: 'Analytics Dashboard',
-      description: 'AI-powered insights and performance analytics for better decision making'
+      title: 'Service-Level Connected Architecture',
+      description: 'Secure, real-time communication framework enabling seamless collaboration across governmental and private healthcare entities'
     },
     {
       icon: Shield,
-      title: 'Security & Privacy',
-      description: 'Enterprise-grade security with role-based access control and audit logging'
+      title: 'Discretionary Controlled Protocol',
+      description: 'Formulated protocol for secure health data exchange with controlled access and error-controlled exchange mechanisms'
     },
     {
-      icon: Brain,
-      title: 'Machine Learning',
-      description: 'Predictive analytics, sentiment analysis, and intelligent resource planning'
+      icon: Users,
+      title: 'Decentralized Interoperable Network',
+      description: 'Robust framework facilitating seamless data sharing among healthcare facilities with FHIR-based compatibility'
     },
     {
       icon: MessageSquare,
-      title: 'Patient Feedback',
-      description: 'Real-time patient feedback collection with sentiment analysis and TES scoring'
+      title: 'Real-Time Communication',
+      description: 'Intelligent integration mechanisms enabling instant coordination and service delivery across health institutions'
+    },
+    {
+      icon: Shield,
+      title: 'Secure Authentication',
+      description: 'Enterprise-grade authentication procedures ensuring data security and privacy in healthcare administration'
+    },
+    {
+      icon: BarChart3,
+      title: 'FHIR Compliance',
+      description: 'Adopts fundamental principles from Fast Healthcare Interoperability Resources for efficient healthcare data management'
     }
   ];
 
@@ -56,27 +54,21 @@ export default function LandingPage() {
     { number: '24/7', label: 'Support' }
   ];
 
-  const testimonials = [
+  const objectives = [
     {
-      name: 'Dr. Sarah Johnson',
-      role: 'Chief Medical Officer',
-      hospital: 'City General Hospital',
-      content: 'SCIS has revolutionized our patient care with its intelligent analytics and seamless interoperability.',
-      rating: 5
+      title: 'Service-Level Architecture',
+      description: 'Design of a service-level connected architecture to enable secure, real-time communication across healthcare institutions',
+      icon: Building2
     },
     {
-      name: 'Michael Chen',
-      role: 'Hospital Administrator',
-      hospital: 'Metro Medical Center',
-      content: 'The real-time insights and performance monitoring have significantly improved our operational efficiency.',
-      rating: 5
+      title: 'Data Exchange Protocol',
+      description: 'Formulation of a discretionary controlled protocol for health data exchange with error-controlled mechanisms',
+      icon: Shield
     },
     {
-      name: 'Emily Davis',
-      role: 'IT Director',
-      hospital: 'Regional Health Center',
-      content: 'The FHIR compliance and security features give us confidence in our data management.',
-      rating: 5
+      title: 'Implementation & Evaluation',
+      description: 'Implementation and evaluation of the resultant modules to ensure compatibility and efficiency in healthcare data management',
+      icon: BarChart3
     }
   ];
 
@@ -88,27 +80,27 @@ export default function LandingPage() {
           <div className="flex justify-between items-center py-6">
             <div className="flex items-center">
               <Building2 className="h-8 w-8 text-primary-600" />
-              <span className="ml-2 text-2xl font-bold text-gray-900">SCIS</span>
+              <span className="ml-2 text-2xl font-bold text-gray-900">SmartCoIHA</span>
             </div>
             <div className="flex items-center space-x-4">
               <button
                 onClick={() => router.push('/login')}
                 className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
               >
-                Hospital Login
+                Login
               </button>
               <button
-                onClick={() => router.push('/system-manager-login')}
-                className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
+                onClick={() => router.push('/register-hospital')}
+                className="bg-primary-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-primary-700"
               >
-                System Manager
+                Register Your Hospital
               </button>
-              <button
+              {/* <button
                 onClick={() => router.push('/feedback')}
                 className="bg-primary-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-primary-700"
               >
                 Submit Feedback
-              </button>
+              </button> */}
             </div>
           </div>
         </div>
@@ -120,11 +112,15 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div>
               <h1 className="text-4xl lg:text-6xl font-bold mb-6">
-                Smart Connected Integrated System
+                SmartCoIHA
               </h1>
+              <p className="text-lg lg:text-xl mb-4 text-primary-100 font-semibold">
+                Smart Connected System for Integrated Health Administration
+              </p>
               <p className="text-xl lg:text-2xl mb-8 text-primary-100">
-                Transforming healthcare administration through intelligent connected systems, 
-                patient feedback analysis, and predictive resource planning.
+                Revolutionizing national healthcare planning, coordination, and service delivery 
+                through intelligent integration of health institutions. Establishing a robust framework 
+                for seamless collaboration across governmental and private healthcare entities.
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
                 <button
@@ -177,11 +173,12 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
-              Comprehensive Healthcare Solutions
+              Integrated Healthcare Framework
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Our integrated platform provides everything you need to manage healthcare operations, 
-              analyze patient feedback, and optimize resource allocation.
+              SmartCoIHA establishes a decentralized, interoperable network for data sharing among 
+              healthcare facilities, incorporating real-time communication mechanisms, secure authentication 
+              procedures, and error-controlled exchange protocols based on FHIR principles.
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -219,26 +216,22 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
-              Trusted by Healthcare Professionals
+              Research Objectives
             </h2>
             <p className="text-xl text-gray-600">
-              See what our users say about SCIS
+              SmartCoIHA is designed to achieve comprehensive healthcare integration objectives
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {testimonials.map((testimonial, index) => (
+            {objectives.map((objective, index) => (
               <div key={index} className="bg-gray-50 rounded-lg p-6">
                 <div className="flex items-center mb-4">
-                  {[...Array(testimonial.rating)].map((_, i) => (
-                    <Star key={i} className="h-5 w-5 text-yellow-400 fill-current" />
-                  ))}
+                  <div className="bg-primary-100 p-3 rounded-lg">
+                    <objective.icon className="h-6 w-6 text-primary-600" />
+                  </div>
                 </div>
-                <p className="text-gray-700 mb-4 italic">"{testimonial.content}"</p>
-                <div>
-                  <div className="font-semibold text-gray-900">{testimonial.name}</div>
-                  <div className="text-sm text-gray-600">{testimonial.role}</div>
-                  <div className="text-sm text-primary-600">{testimonial.hospital}</div>
-                </div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-3">{objective.title}</h3>
+                <p className="text-gray-700">{objective.description}</p>
               </div>
             ))}
           </div>
@@ -249,11 +242,11 @@ export default function LandingPage() {
       <section className="py-24 bg-gray-900 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl lg:text-4xl font-bold mb-4">
-            Ready to Transform Your Healthcare Operations?
+            Revolutionizing National Healthcare Integration
           </h2>
           <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
-            Join hundreds of healthcare institutions already using SCIS to improve patient care 
-            and operational efficiency.
+            SmartCoIHA enables seamless collaboration across governmental and private healthcare entities, 
+            establishing a robust framework for intelligent health institution integration and coordinated service delivery.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button
@@ -279,19 +272,21 @@ export default function LandingPage() {
             <div>
               <div className="flex items-center mb-4">
                 <Building2 className="h-8 w-8 text-primary-600" />
-                <span className="ml-2 text-xl font-bold">SCIS</span>
+                <span className="ml-2 text-xl font-bold">SmartCoIHA</span>
               </div>
               <p className="text-gray-400">
-                Smart Connected Integrated System for modern healthcare administration.
+                Smart Connected System for Integrated Health Administration (SmartCoIHA) - 
+                A comprehensive platform revolutionizing national healthcare planning, coordination, 
+                and service delivery through intelligent integration of health institutions.
               </p>
             </div>
             <div>
-              <h3 className="font-semibold mb-4">Features</h3>
+              <h3 className="font-semibold mb-4">Core Capabilities</h3>
               <ul className="space-y-2 text-gray-400">
-                <li>Hospital Management</li>
-                <li>Patient Analytics</li>
-                <li>Feedback System</li>
-                <li>ML Insights</li>
+                <li>Service-Level Architecture</li>
+                <li>Data Exchange Protocol</li>
+                <li>Real-Time Communication</li>
+                <li>FHIR Compliance</li>
               </ul>
             </div>
             <div>
@@ -314,7 +309,7 @@ export default function LandingPage() {
             </div>
           </div>
           <div className="border-t border-gray-700 mt-8 pt-8 text-center text-gray-400">
-            <p>&copy; 2024 SCIS. All rights reserved.</p>
+            <p>&copy; 2024 SmartCoIHA. All rights reserved.</p>
           </div>
         </div>
       </footer>

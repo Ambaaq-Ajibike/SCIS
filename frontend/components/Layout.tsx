@@ -135,7 +135,7 @@ export default function Layout({ children }: LayoutProps) {
           <div className="w-full px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center py-4">
               <div className="flex items-center">
-                <h1 className="text-2xl font-semibold text-gray-900">SCIS Admin Dashboard</h1>
+                <h1 className="text-2xl font-semibold text-gray-900">SmartCoIHA Dashboard</h1>
               </div>
               <div className="flex items-center space-x-4">
                 <div className="text-sm text-gray-500">

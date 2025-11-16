@@ -61,3 +61,13 @@ public class PendingDataRequestDto
     public DateTime RequestDate { get; set; }
     public string RequestingUserName { get; set; } = string.Empty;
 }
+
+public class DataAvailabilityResponseDto
+{
+    public bool IsAvailable { get; set; }
+    public string? Message { get; set; }
+    public string? PatientHospitalName { get; set; }
+    public string? PatientName { get; set; }
+    public bool IsCrossHospitalRequest { get; set; }
+    public int ResponseTimeMs { get; set; }
+}
