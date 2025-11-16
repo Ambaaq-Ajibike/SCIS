@@ -681,3 +681,5 @@ appsettings.Staging.json
 !package.json
 !tsconfig.json
 !*.config.json
+/backend/SCIS/SCIS.API/appsettings.json
+/backend/SCIS/SCIS.API/appsettings.Development.json
