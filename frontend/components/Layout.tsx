@@ -61,7 +61,7 @@ export default function Layout({ children }: LayoutProps) {
           <div className="flex-1 h-0 pt-5 pb-4 overflow-y-auto">
             <div className="flex-shrink-0 flex items-center px-4">
               <Building2 className="h-8 w-8 text-primary-600" />
-              <span className="ml-2 text-xl font-bold text-gray-900">SCIS</span>
+              <span className="ml-2 text-xl font-bold text-gray-900">SmartCoIHA</span>
             </div>
             <nav className="mt-5 px-2 space-y-1">
               {filteredNavigation.map((item) => (
@@ -85,7 +85,7 @@ export default function Layout({ children }: LayoutProps) {
           <div className="flex flex-col flex-grow pt-5 pb-4 overflow-y-auto">
             <div className="flex items-center flex-shrink-0 px-4">
               <Building2 className="h-8 w-8 text-primary-600" />
-              <span className="ml-2 text-xl font-bold text-gray-900">SCIS</span>
+              <span className="ml-2 text-xl font-bold text-gray-900">SmartCoIHA</span>
             </div>
             <nav className="mt-5 flex-1 px-2 space-y-1">
               {filteredNavigation.map((item) => (
